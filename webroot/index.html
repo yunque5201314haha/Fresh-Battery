@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="renderer" content="webkit">
+<meta name="color-scheme" content="light dark">
+<title>Fresh-Battery</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="js/style.css">
+
+<!-- KernelSU 系统动态取色（壁纸 Monet 色），仅在 KernelSU Manager WebView 内生效 -->
+<link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
+<link rel="stylesheet" href="https://mui.kernelsu.org/internal/colors.css">
+
+<!-- @material/web — Google 官方 M3 Web Components，buildless CDN -->
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@material/web@2.2.0/button/filled-button.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@material/web@2.2.0/button/outlined-button.js">
+<!-- slider replaced with native input[type=range] -->
+<script type="importmap">
+{
+  "imports": {
+    "@material/web/": "https://cdn.jsdelivr.net/npm/@material/web@2.2.0/"
+  }
+}
+</script>
+<script type="module">
+  import '@material/web/button/filled-button.js';
+  import '@material/web/button/outlined-button.js';
+</script>
+
+<link rel="preload" href="js/ui.js" as="script">
+<link rel="preload" href="js/exec.js" as="script">
+<link rel="preload" href="js/theme.js" as="script">
+<link rel="preload" href="js/config.js" as="script">
+<link rel="preload" href="js/status.js" as="script">
+<link rel="preload" href="js/charging.js" as="script">
+
+</head>
+<body style="opacity:0;transition:opacity .25s ease">
+<div id="app">
+  <!-- ──────── Main content ──────── -->
+  <div id="main">
+
+    <!-- 状态页 -->
+    <div class="page active" id="page-status">
+      <div class="top-bar">
+        <div class="top-bar-title">状态</div>
+        <div class="top-bar-greeting" id="greeting-text"></div>
+      </div>
+      <div class="page-body">
+
+        <!-- 温度双格 -->
+        <div class="stat-row">
+          <div class="tile-pri">
+            <div class="tile-label">伪装写入</div>
+            <div class="tile-val" id="m-target">--<sup>°C</sup></div>
+            <div class="tile-path">/proc/shell-temp</div>
+            <div class="sparkline-wrap">
+              <canvas class="sparkline" id="sparkline"></canvas>
+            </div>
+          </div>
+          <div class="tile-sec tile-sec-temp">
+            <div class="t-block">
+              <div class="tile-label">电池实测</div>
+              <div class="tile-val" id="m-batt">--<sup>°</sup></div>
+            </div>
+            <div class="batt-sparkline-wrap">
+              <canvas class="sparkline" id="sparkline-batt"></canvas>
+            </div>
+            <span class="status-chip" id="badge-chg">未充电</span>
+          </div>
+        </div>
+
+        <!-- 电量进度环卡片 -->
+        <div class="card soc-ring-card">
+          <div class="soc-ring-wrap">
+            <svg class="soc-ring-svg" viewBox="0 0 120 120">
+              <circle class="soc-ring-bg"   cx="60" cy="60" r="50" fill="none" stroke-width="10"/>
+              <circle class="soc-ring-fill" cx="60" cy="60" r="50" fill="none" stroke-width="10"
+                stroke-linecap="round" transform="rotate(-90 60 60)"
+                id="soc-ring-arc"/>
+            </svg>
+            <div class="soc-ring-inner">
+              <div class="soc-ring-num" id="soc-disp-num">--</div>
+              <div class="soc-ring-unit">%</div>
+            </div>
+          </div>
+          <div class="soc-ring-detail">
+            <div class="soc-detail-row">
+              <span class="soc-detail-label">chip_soc</span>
+              <span class="soc-detail-val" id="soc-real">--</span>
+            </div>
+            <div class="soc-detail-row">
+              <span class="soc-detail-label">capacity</span>
+              <span class="soc-detail-val" id="soc-disp">--</span>
+            </div>
+            <div class="soc-progress-track">
+              <div class="soc-progress-fill" id="soc-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 电池深度数据 -->
+        <div class="card">
+          <div class="batt-grid">
+            <div class="batt-cell" id="cell-volt">
+              <div class="batt-cell-val" id="b-volt">--</div>
+              <div class="batt-cell-label">电压 mV</div>
+            </div>
+            <div class="batt-cell" id="cell-curr">
+              <div class="batt-cell-val" id="b-curr">--</div>
+              <div class="batt-cell-label">电流 mA</div>
+            </div>
+            <div class="batt-cell">
+              <div class="batt-cell-val" id="b-watt">--</div>
+              <div class="batt-cell-label">功率 W</div>
+            </div>
+            <div class="batt-cell">
+              <div class="batt-cell-val" id="b-cycle">--</div>
+              <div class="batt-cell-label">循环次数</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 进程状态 -->
+        <div class="pid-card">
+          <div class="pid-dot" id="proc-dot"></div>
+          <div class="pid-info">
+            <div class="pid-name">MAIN</div>
+            <div class="pid-id" id="proc-pid">—</div>
+          </div>
+          <div class="pid-badge off" id="proc-status">离线</div>
+          <div class="pid-actions">
+            <button class="pid-btn outlined" onclick="popBtn(this);svcStop()">停止服务</button>
+            <button class="pid-btn filled" onclick="popBtn(this);svcRestart()">重启服务</button>
+          </div>
+        </div>
+
+        <!-- 设备 -->
+        <div class="card">
+          <div class="card-head">设备</div>
+          <div class="info-list">
+            <div class="info-item">
+              <span class="info-label">型号</span>
+              <span class="info-value" id="i-model">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">当前时间</span>
+              <span class="info-value" id="i-time">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="center-btn" style="gap:10px">
+          <md-filled-button onclick="popBtn(this);refreshStatus()">
+            <svg slot="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+            刷新
+          </md-filled-button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 自定义页 — 充电控制 + 伪装功能 -->
+    <div class="page" id="page-config">
+      <div class="top-bar top-bar-row">
+        <div class="top-bar-title">开启你的自定义</div>
+        <div class="top-bar-hint" onclick="openChargingPage()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          <span>左滑切页</span>
+        </div>
+      </div>
+      <div class="page-body">
+
+        <!-- 充电开启 — 充电时启用已开启的伪装功能 -->
+        <div class="card card-no-chg">
+          <div class="chg-item">
+            <div class="master-leading" id="chg-gate-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            </div>
+            <div class="chg-item-text">
+              <div class="chg-item-title">充电开启</div>
+              <div class="chg-item-sub">充电时启用已开启的伪装功能</div>
+              <div class="chg-gate-status" id="chg-gate-status">检测充电状态…</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="sw-chg-gate" onchange="onChgGateToggle()"><span class="toggle-slider"></span></label>
+          </div>
+          <div id="chg-gate-body" class="disguise-body">
+            <div id="chg-gate-list"></div>
+          </div>
+        </div>
+
+
+        <!-- ─── 伪装功能 ─── -->
+        <div class="section-label">伪装功能</div>
+
+        <!-- 电量伪装 -->
+        <div class="card card-no-chg disguise-card">
+          <div class="chg-item">
+            <div class="master-leading" id="cap-spoof-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4zM13 18h-2v-2h2v2zm0-4h-2V9h2v5z"/></svg>
+            </div>
+            <div class="chg-item-text">
+              <div class="chg-item-title">电量伪装</div>
+              <div class="chg-item-sub">伪装电池容量百分比，滑块可调</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="sw-cap-spoof" onchange="onCapSpoofToggle()"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="disguise-body" id="cap-spoof-body">
+            <div class="slider-wrap">
+              <input type="range" class="m3-slider" id="cap-spoof-slider" min="0" max="100" value="80" oninput="onCapSpoofSlider(this)">
+            </div>
+            <div class="chg-label-row">
+              <span class="chg-range">0%</span>
+              <span class="chg-curr-val" id="cap-spoof-val">80%</span>
+              <span class="chg-range">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 电池温度伪装 -->
+        <div class="card card-no-chg disguise-card">
+          <div class="chg-item">
+            <div class="master-leading" id="temp-spoof-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4zm-4-8c0-.55.45-1 1-1s1 .45 1 1v1h-2V5zm0 3h2v2h-2V8zm0 3h2v2h-2v-2z"/></svg>
+            </div>
+            <div class="chg-item-text">
+              <div class="chg-item-title">电池温度伪装</div>
+              <div class="chg-item-sub">伪装电池温度传感器返回值</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="sw-temp-spoof" onchange="onTempSpoofToggle()"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="disguise-body" id="temp-spoof-body">
+            <div class="slider-wrap">
+              <input type="range" class="m3-slider" id="temp-spoof-slider" min="0" max="100" value="34" oninput="onTempSpoofSlider(this)">
+            </div>
+            <div class="chg-label-row">
+              <span class="chg-range">0°C</span>
+              <span class="chg-curr-val" id="temp-spoof-val">34°C</span>
+              <span class="chg-range">100°C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 充电循环次数伪装 -->
+        <div class="card card-no-chg disguise-card">
+          <div class="chg-item">
+            <div class="master-leading" id="cc-spoof-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-13h-2v6l5.25 3.15L17 12.23l-4-2.37V7z"/></svg>
+            </div>
+            <div class="chg-item-text">
+              <div class="chg-item-title">充电循环次数伪装</div>
+              <div class="chg-item-sub">伪装电池循环计数，滑块可调</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="sw-cc-spoof" onchange="onCcSpoofToggle()"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="disguise-body" id="cc-spoof-body">
+            <div class="slider-wrap">
+              <input type="range" class="m3-slider" id="cc-spoof-slider" min="0" max="9999" value="10" oninput="onCcSpoofSlider(this)">
+            </div>
+            <div class="chg-label-row">
+              <span class="chg-range">0</span>
+              <span class="chg-curr-val" id="cc-spoof-val">10</span>
+              <span class="chg-range">9999</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 充放状态伪装 -->
+        <div class="card card-no-chg">
+          <div class="chg-item">
+            <div class="master-leading" id="status-spoof-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3-13H9v2h6V7zm0 4H9v2h6v-2zm0 4H9v2h6v-2z"/></svg>
+            </div>
+            <div class="chg-item-text">
+              <div class="chg-item-title">充放状态伪装</div>
+              <div class="chg-item-sub">将充电状态伪装为「未充电」</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="sw-status-spoof" onchange="onStatusSpoofToggle()"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <!-- 解除亮屏充电限制 -->
+        <div class="card card-no-chg">
+          <div class="chg-item">
+            <div class="master-leading" id="chg-unlock-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>
+            </div>
+            <div class="chg-item-text">
+              <div class="chg-item-title">解除亮屏充电限制</div>
+              <div class="chg-item-sub">充电时解除屏幕亮起导致的电流限制</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="sw-chg-unlock" onchange="onChgUnlockToggle()"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <md-outlined-button onclick="popBtn(this);saveConfig()">保存配置</md-outlined-button>
+          <md-filled-button   onclick="popBtn(this);applyNow()">立即生效</md-filled-button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 关于页 -->
+    <div class="page" id="page-about">
+      <div class="top-bar">
+        <div class="top-bar-title">关于</div>
+      </div>
+      <div class="page-body">
+
+        <!-- 模块信息卡 -->
+        <div class="card">
+          <div class="about-mod-hero">
+            <div class="about-mod-icon">
+              <svg viewBox="0 0 24 24" fill="var(--clr-on-primary-container)"><path d="M17 12h-5V7h-2v7h7v-2zm2.5-9.5A10 10 0 1 0 22 12 9.93 9.93 0 0 0 19.5 2.5zM12 20a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/></svg>
+            </div>
+            <div class="about-mod-info">
+              <div class="about-mod-name">FreshBattery</div>
+              <div class="about-mod-ver" id="about-ver">v1.0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 链接卡 -->
+        <div class="card">
+          <div class="about-link-grid">
+            <button class="link-btn" onclick="openUrl('https://www.123912.com/s/pk6Tjv-uTm0v')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+              更新网盘
+            </button>
+            <button class="link-btn" onclick="openUrl('/* TODO: 填入交流群链接 */')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+              交流群
+            </button>
+          </div>
+        </div>
+
+        <!-- 作者卡 -->
+        <div class="section-label">作者</div>
+        <div class="card card-no-chg">
+          <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/38698278')">
+            <img class="author-avatar" src="js/avatar.png" alt="川秋">
+            <div class="author-info">
+              <div class="author-name">石板上回荡的</div>
+              <div class="author-bio">点击设置我的签名</div>
+            </div>
+            <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          </div>
+          <div class="donate-row" onclick="openDonate()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--clr-primary)"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <span>捐赠支持一下</span>
+            <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          </div>
+        </div>
+
+        <!-- 代码节点/支持者 -->
+        <div class="section-label">代码节点 / 支持者</div>
+        <div class="card card-no-chg">
+          <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/4262905')">
+            <img class="author-avatar" src="js/阮mumu.jpg" alt="阮mumu">
+            <div class="author-info">
+              <div class="author-name">阮mumu</div>
+              <div class="author-bio">CoolAPK</div>
+            </div>
+            <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          </div>
+          <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" onclick="openUrl('https://www.coolapk.com/u/9510475')">
+            <img class="author-avatar" src="js/她说好了.jpg" alt="她说好了">
+            <div class="author-info">
+              <div class="author-name">她说好了</div>
+              <div class="author-bio">CoolAPK</div>
+            </div>
+            <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          </div>
+          <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" onclick="openUrl('https://www.coolapk.com/u/716079')">
+            <img class="author-avatar" src="js/bybycode.jpg" alt="bybycode">
+            <div class="author-info">
+              <div class="author-name">bybycode</div>
+              <div class="author-bio">CoolAPK</div>
+            </div>
+            <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+          </div>
+        </div>
+
+        <!-- 捐赠弹窗 -->
+        <div id="donate-overlay" onclick="closeDonate()">
+          <img src="js/donate.png" id="donate-img">
+        </div>
+
+        <div class="about-footer">抄了 Metahybird 的底栏作业</div>
+
+      </div>
+    </div>
+
+    <!-- 充电控制子页（配置页左滑进入） -->
+    <div class="page" id="page-charging">
+      <div class="top-bar top-bar-row">
+        <div class="top-bar-title">充电控制</div>
+        <div class="top-bar-charging-actions">
+          <label class="toggle-switch"><input type="checkbox" id="sw-debug" onchange="onDebugToggle()"><span class="toggle-slider"></span></label>
+          <span class="debug-label">调试环境</span>
+        </div>
+      </div>
+      <div class="page-body">
+
+        <!-- ─── MI 专区 ─── -->
+        <div id="chg-panel-mi" style="display:none">
+
+          <!-- 板块一：充电绕过 -->
+          <div class="section-label">充电绕过</div>
+          <div class="card card-no-chg">
+            <div class="chg-item">
+              <div class="master-leading" id="bypass-icon">
+                <svg viewBox="0 0 24 24" fill="var(--clr-on-primary-container)"><path d="M17 12h-5V7h-2v7h7v-2zm2.5-9.5A10 10 0 1 0 22 12 9.93 9.93 0 0 0 19.5 2.5zM12 20a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/></svg>
+              </div>
+              <div class="chg-item-text">
+                <div class="chg-item-title">MI 伪旁路充电</div>
+                <div class="chg-item-sub">全局限制充电电流至 500mA，适用于小米/红米/POCO</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="sw-bypass" onchange="onBypassToggle()"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+
+          <!-- 板块二：快充保障 -->
+          <div class="section-label">快充保障</div>
+          <div class="card card-no-chg">
+            <div class="chg-item chg-item-compact">
+              <div class="master-leading" id="curr-icon-chg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-secondary)"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+              </div>
+              <div class="chg-item-text">
+                <div class="chg-item-title">充电调速</div>
+                <div class="chg-item-sub">限制最大充电电流，延长电池寿命</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="sw-currlimit" onchange="onCurrLimitToggle()"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="chg-slider-area">
+              <div class="slider-wrap">
+                <input type="range" class="m3-slider" id="curr-slider" min="500" max="22000" step="500" value="22000" oninput="onCurrSlider(this)">
+              </div>
+              <div class="chg-label-row">
+                <span class="chg-range">500mA</span>
+                <span class="chg-curr-val" id="curr-val">22000mA</span>
+                <span class="chg-range">22000mA</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <md-outlined-button onclick="popBtn(this);saveConfig()">保存配置</md-outlined-button>
+            <md-filled-button   onclick="popBtn(this);applyNow()">立即生效</md-filled-button>
+          </div>
+        </div>
+
+        <!-- ─── OPPO/一加/真我专区 ─── -->
+        <div id="chg-panel-oplus" style="display:none">
+
+          <!-- ─── 温度墙 ─── -->
+          <div class="section-label">温度墙</div>
+          <div class="card">
+            <div class="gauge-area">
+              <div class="gauge-box">
+                <svg id="gauge-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="100" cy="100" r="80" fill="none" stroke-width="6"
+                    id="gauge-track-outer" stroke="var(--clr-surface-container-highest)" stroke-dasharray="502" stroke-dashoffset="0" stroke-linecap="round"
+                    transform="rotate(-90 100 100)"/>
+                  <circle cx="100" cy="100" r="80" fill="none" stroke-width="6"
+                    id="gauge-arc-outer" stroke="var(--clr-primary)" stroke-dasharray="502" stroke-dashoffset="502" stroke-linecap="round"
+                    transform="rotate(-90 100 100)" style="transition:stroke-dashoffset .6s cubic-bezier(.4,0,.2,1)"/>
+                </svg>
+                <div class="gauge-readout" id="gauge-val">34<small>°C</small></div>
+              </div>
+              <div class="gauge-labels"><span>30°C</span><span>38°C</span></div>
+            </div>
+            <div class="slider-wrap">
+              <input type="range" class="m3-slider" id="temp-slider" min="30" max="38" value="34" oninput="onTempSlider(this)">
+            </div>
+            <div class="seg-group" id="temp-presets">
+              <button class="seg-btn active" data-temp="30" onclick="setPreset(30)">30°C</button>
+              <button class="seg-btn" data-temp="34" onclick="setPreset(34)">34°C</button>
+              <button class="seg-btn" data-temp="36" onclick="setPreset(36)">36°C</button>
+            </div>
+          </div>
+
+          <!-- ─── CPU 频率解锁 ─── -->
+          <div class="section-label">CPU 频率解锁</div>
+          <div class="card card-no-chg">
+            <div class="chg-item">
+              <div class="master-leading" id="cpu-unlock-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-secondary)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+              </div>
+              <div class="chg-item-text">
+                <div class="chg-item-title">CPU 频率解锁</div>
+                <div class="chg-item-sub">解除游戏/温控 CPU 频率限制</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="sw-cpu" onchange="cfg.cpu = this.checked ? 1 : 0"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+
+          <!-- ─── 充电绕过 ─── -->
+          <div class="section-label">充电绕过</div>
+          <div class="card card-no-chg">
+            <div class="chg-item">
+              <div class="master-leading" id="mmi-icon">
+                <svg viewBox="0 0 24 24" fill="var(--clr-on-primary-container)"><path d="M17 12h-5V7h-2v7h7v-2zm2.5-9.5A10 10 0 1 0 22 12 9.93 9.93 0 0 0 19.5 2.5zM12 20a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/></svg>
+              </div>
+              <div class="chg-item-text">
+                <div class="chg-item-title">O 伪旁路充电</div>
+                <div class="chg-item-sub">OPPO/一加/真我基础旁路方案</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="sw-mmi" onchange="onMmiToggle()"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="chg-divider"></div>
+            <div class="chg-item">
+              <div class="master-leading" id="plc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-secondary)"><path d="M14.69 2.21L4.33 11.49c-.64.58-.28 1.65.58 1.73L13 14l-4.85 6.76c-.22.31-.19.74.08 1.01.3.3.77.31 1.08.02l10.36-9.28c.64-.58.28-1.65-.58-1.73L11 10l4.85-6.76c.22.31-.19.74-.08-1.01-.3-.3-.77-.31-1.08-.02z"/></svg>
+              </div>
+              <div class="chg-item-text">
+                <div class="chg-item-title">全场景伪 Osys 旁路充电</div>
+                <div class="chg-item-sub">系统级方案，注入 PLC 特性声明</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="sw-plc" onchange="onPlcToggle()"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+
+          <!-- ─── 快充保障 ─── -->
+          <div class="section-label">快充保障</div>
+          <div class="card card-no-chg">
+            <div class="chg-item chg-item-column">
+              <div class="chg-inner-row">
+                <div class="master-leading" id="plug-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-secondary)"><path d="M16 7V3h-2v4h-4V3H8v4a4 4 0 0 0 3 3.87V17a3 3 0 0 1-6 0v-1a2 2 0 0 0 0-4V9H3v3a2 2 0 0 0 2 2v1a5 5 0 0 0 10 0v-6.13A4 4 0 0 0 16 7z"/></svg>
+                </div>
+                <div class="chg-item-text">
+                  <div class="chg-item-title">快充伪插拔</div>
+                  <div class="chg-item-sub">解除充电头计时器限制，保持快充不掉</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="sw-plug" onchange="onPlugToggle()"><span class="toggle-slider"></span></label>
+              </div>
+              <div id="plug-detail" class="plug-detail-wrap">
+                <div class="inc-row">
+                  <span class="inc-label">间隔（分钟）</span>
+                  <div class="inc-group">
+                    <button class="inc-btn" onclick="adjPlug('interval',-1)">−</button>
+                    <span class="inc-val" id="plug-interval-val">1min</span>
+                    <button class="inc-btn" onclick="adjPlug('interval',1)">+</button>
+                  </div>
+                </div>
+                <div class="inc-row">
+                  <span class="inc-label">电量阈值（%）</span>
+                  <div class="inc-group">
+                    <button class="inc-btn" onclick="adjPlug('level',-5)">−</button>
+                    <span class="inc-val" id="plug-level-val">80%</span>
+                    <button class="inc-btn" onclick="adjPlug('level',5)">+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 组件控制 -->
+          <div class="card card-no-chg">
+            <div class="chg-item">
+              <div class="master-leading" id="comp-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-secondary)"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>
+              </div>
+              <div class="chg-item-text">
+                <div class="chg-item-title">组件控制</div>
+                <div class="chg-item-sub">WiFi 游戏高温加速 / 音频热控策略管理</div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="sw-comp" onchange="onCompToggle()"><span class="toggle-slider"></span></label>
+            </div>
+            <div id="comp-detail" class="plug-detail-wrap">
+              <div class="comp-row">
+                <div class="comp-row-text">
+                  <div class="comp-row-title">WiFi 游戏高温加速</div>
+                  <div class="comp-row-sub">开 = 1 / 关 = 0</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="sw-comp-wifi" onchange="onCompWifiToggle()"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="comp-row">
+                <div class="comp-row-text">
+                  <div class="comp-row-title">音频热控</div>
+                  <div class="comp-row-sub">开 = 0 / 关 = 1</div>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="sw-comp-audio" onchange="onCompAudioToggle()"><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <md-outlined-button onclick="popBtn(this);saveConfig()">保存配置</md-outlined-button>
+            <md-filled-button   onclick="popBtn(this);applyOplus()">立即生效</md-filled-button>
+          </div>
+        </div>
+
+        <!-- ─── 未识别设备 ─── -->
+        <div id="chg-panel-unknown" style="display:none">
+          <div class="card">
+            <div class="unknown-msg" id="chg-unknown-msg">正在识别设备品牌…</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- #main -->
+
+  <!-- ──────── 悬浮胶囊导航栏 ──────── -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" id="tab-status" data-page="status">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+      </div>
+      <div class="tab-label">状态</div>
+    </button>
+
+    <button class="tab" id="tab-config" data-page="config">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      </div>
+      <div class="tab-label">配置</div>
+    </button>
+
+    <button class="tab" id="tab-about" data-page="about">
+      <div class="tab-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+      </div>
+      <div class="tab-label">关于</div>
+    </button>
+  </nav>
+
+</div><!-- #app -->
+
+<script src="js/ui.js" defer></script>
+<script src="js/exec.js" defer></script>
+<script src="js/theme.js" defer></script>
+<script src="js/config.js" defer></script>
+<script src="js/status.js" defer></script>
+<script src="js/charging.js" defer></script>
+
+</body>
+</html>

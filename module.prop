@@ -1,0 +1,8 @@
+id=Fresh-Battery
+name=FreshBattery
+version=v1.0
+versionCode=10
+author=石板上回荡的
+description=让您的电池更加适合
+webui=true
+updateJson=https://raw.githubusercontent.com/yunque5201314haha/Fresh-Battery/main/update.json

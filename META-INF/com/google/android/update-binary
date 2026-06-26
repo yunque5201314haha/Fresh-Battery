@@ -1,0 +1,2 @@
+#!/system/bin/sh
+# 不设置 SKIPUNZIP，让 Magisk 自动解压模块文件

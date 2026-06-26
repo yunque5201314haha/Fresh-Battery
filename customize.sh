@@ -1,0 +1,44 @@
+#!/system/bin/sh
+if [ -z "$MODPATH" ]; then
+    _self="$0"
+    case "$_self" in
+        /*) ;;
+        *)  _self="$(pwd)/$_self" ;;
+    esac
+    MODPATH="${_self%/*}"
+fi
+mkdir -p "$MODPATH" || { echo "错误：无法创建 $MODPATH"; exit 1; }
+
+CFG="$MODPATH/config"
+
+[ -f "$CFG" ] || printf '%s\n' \
+    "目标温度=34" \
+    "服务开关=0" \
+    "循环伪装=0" \
+    "CPU频率解锁=0" \
+    "电量挂载=0" \
+    "MI伪旁路充电=0" \
+    "电流限制=0" \
+    "最大电流=22000" \
+    "O伪旁路充电=0" \
+    "伪插拔间隔=0" \
+    "伪插拔电量=80" \
+    "伪Osys旁路充电=0" \
+    "组件控制=0" > "$CFG"
+chmod 666 "$CFG"
+
+# 创建模块目录并标记更新（兼容 Magisk 和 APatch）
+MDIR=/data/adb/modules/Fresh-Battery
+if [ -f /data/adb/magisk.db ] || [ -f /data/adb/apd ]; then
+    mkdir -p "$MDIR"
+    cp "$MODPATH/module.prop" "$MDIR/module.prop"
+    : > "$MDIR/update"
+fi
+
+ui_print "  FreshBattery 安装完成，请通过 WebUI 配置。"
+ui_print " "
+ui_print "  本模块作者不承担任何带来的后果"
+ui_print "  刷入本模块代表同意"
+ui_print " "
+ui_print "  感谢使用本模块！"
+exit 0
