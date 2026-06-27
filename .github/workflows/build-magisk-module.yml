@@ -37,17 +37,17 @@ jobs:
         run: |
           SHORT_SHA="${{ github.sha }}" && SHORT_SHA="${SHORT_SHA:0:7}"
           BUILD_TIME=$(date -u +%m%d%H%M -d "+8 hours")
-          {
-            echo "FreshBattery v${MODULE_VER} 构建 #${BUILD_NUM}"
-            echo "─────────────────────────"
-            echo "文件: ${ZIP_NAME}"
-            echo "提交: ${SHORT_SHA}"
-            echo "时间: ${BUILD_TIME}"
-            echo ""
-            echo "${{ github.event.head_commit.message }}"
-            echo ""
-            echo "提交者: ${{ github.actor }}"
-          } > tg_caption.txt
+          cat > tg_caption.txt << EOF
+FreshBattery v${MODULE_VER} 构建 #${BUILD_NUM}
+─────────────────────────
+文件: ${ZIP_NAME}
+提交: ${SHORT_SHA}
+时间: ${BUILD_TIME}
+
+${{ github.event.head_commit.message }}
+
+提交者: ${{ github.actor }}
+EOF
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -65,10 +65,13 @@ jobs:
             exit 1
           fi
           echo "发送文件: ${ZIP_NAME}"
+          echo "--- caption 内容 ---"
+          cat tg_caption.txt
+          echo "--- 结束 ---"
           curl -sS --fail -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" \
             -F chat_id="${CHAT_ID}" \
-            -F document="@${ZIP_NAME}" \
-            -F caption=@tg_caption.txt \
+            -F "document=@${ZIP_NAME}" \
+            -F "caption=@tg_caption.txt" \
             -o /dev/null -w "Telegram API 响应: %{http_code}\n"
 
       - name: Create Release
