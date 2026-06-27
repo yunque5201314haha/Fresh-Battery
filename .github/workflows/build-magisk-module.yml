@@ -36,7 +36,6 @@ jobs:
           echo "BUILD_NUM=${BUILD_NUM}" >> $GITHUB_ENV
           mkdir -p _module
           cp -r META-INF webroot customize.sh module.prop service.sh uninstall.sh MAIN _module/
-          cp update.json changelog.md _module/ 2>/dev/null || true
           cd _module && zip -r0 "../${ZIP_NAME}" . && cd ..
 
       - name: Prepare Telegram message
