@@ -1,5 +1,27 @@
-/* ─── Status refresh ─── */
 let _initDone = false;
+/* DOM 缓存：减少重复 getElementById */
+const $ = (id, cache) => {
+  if (cache && cache[id]) return cache[id];
+  const el = document.getElementById(id);
+  if (cache) cache[id] = el;
+  return el;
+};
+const _dom = {};
+/* 缓存 computed style 值避免重复触发重排 */
+let _cachedPrimary = '', _cachedSecondary = '', _cachedIsDark = false;
+function refreshStyleCache() {
+  const el = document.documentElement;
+  const cs = getComputedStyle(el);
+  _cachedPrimary = (cs.getPropertyValue('--clr-primary').trim() || '#6750A4');
+  _cachedSecondary = (cs.getPropertyValue('--clr-secondary').trim() || '#625B71');
+  _cachedIsDark = el.classList.contains('theme-dark') ||
+    (!el.classList.contains('theme-light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+let _debounceTimer = null;
+function debounce(fn, ms) {
+  if (_debounceTimer) { clearTimeout(_debounceTimer); }
+  _debounceTimer = setTimeout(() => { _debounceTimer = null; fn(); }, ms);
+}
 async function svcStop() {
   await exec(`kill -9 $(awk '/^MAIN/{print $2}' '${PIDFILE}' 2>/dev/null) 2>/dev/null; true`);
   setTimeout(refreshStatus, 800);
@@ -17,12 +39,7 @@ async function refreshStatus() {
   try {
   const SEP = '||S||';
   const raw = await exec(
-    `grep '^POWER_SUPPLY_TEMP=' /sys/class/power_supply/battery/uevent 2>/dev/null | cut -d= -f2 | tr -d '\r\n'; printf '${SEP}'; ` +
-    `grep '^POWER_SUPPLY_CYCLE_COUNT=' /sys/class/power_supply/battery/uevent 2>/dev/null | cut -d= -f2 | tr -d '\r\n'; printf '${SEP}'; ` +
-    `grep '^POWER_SUPPLY_VOLTAGE_NOW=' /sys/class/power_supply/battery/uevent 2>/dev/null | cut -d= -f2 | tr -d '\r\n'; printf '${SEP}'; ` +
-    `grep '^POWER_SUPPLY_STATUS=' /sys/class/power_supply/battery/uevent 2>/dev/null | cut -d= -f2 | tr -d '\r\n'; printf '${SEP}'; ` +
-    `grep '^POWER_SUPPLY_CAPACITY=' /sys/class/power_supply/battery/uevent 2>/dev/null | cut -d= -f2 | tr -d '\r\n'; printf '${SEP}'; ` +
-    `cat /sys/class/power_supply/battery/current_now 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; ` +
+    `cat /sys/class/power_supply/battery/uevent 2>/dev/null; printf '${SEP}'; ` +
     `cat /sys/class/oplus_chg/battery/chip_soc 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; ` +
     `cat '${PIDFILE}' 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; ` +
     (_initDone ? `printf ''; printf '${SEP}'; printf ''` : `getprop ro.product.model 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; grep '^version=' '${MODDIR}/module.prop' 2>/dev/null | cut -d= -f2 | tr -d '\r\n'`) +
@@ -32,91 +49,87 @@ async function refreshStatus() {
     `cat /sys/class/power_supply/ac/online 2>/dev/null | tr -d '\r\n'`,
     8000
   );
-  const _p = raw.split('||S||');
-  const [tempRaw, cycleRaw, voltRaw, statusRaw, capacityRaw, currRaw, chipSocRaw, pidRaw, model, ver, usbPresentRaw, usbOnlineRaw, acOnlineRaw] =
-    [_p[0]||'', _p[1]||'', _p[2]||'', _p[3]||'', _p[4]||'', _p[5]||'', _p[6]||'', _p[7]||'', _p[8]||'', _p[9]||'', _p[10]||'', _p[11]||'', _p[12]||''];
+  const _p = raw.split(SEP);
+  const uev = parseUevent(_p[0]||'');
+  const tempRaw     = uev['POWER_SUPPLY_TEMP'] || '';
+  const cycleRaw    = uev['POWER_SUPPLY_CYCLE_COUNT'] || '';
+  const voltRaw     = uev['POWER_SUPPLY_VOLTAGE_NOW'] || '';
+  const statusRaw   = uev['POWER_SUPPLY_STATUS'] || '';
+  const capacityRaw = uev['POWER_SUPPLY_CAPACITY'] || '';
+  const currRaw     = uev['POWER_SUPPLY_CURRENT_NOW'] || '';
+  const chipSocRaw  = _p[1]||'';
+  const pidRaw      = _p[2]||'';
+  const model       = _p[3]||'';
+  const ver         = _p[4]||'';
+  const usbPresentRaw = _p[5]||'';
+  const usbOnlineRaw  = _p[6]||'';
+  const acOnlineRaw   = _p[7]||'';
 
-  /* ── 温度 ── */
   const tempVal = parseInt(tempRaw || '-1');
   const tempC   = tempVal >= 0 ? tempVal / 10 : -1;
-  document.getElementById('m-batt').innerHTML = (tempC >= 0 ? tempC.toFixed(1) : '--') + '<sup>°C</sup>';
-  /* tile-sec("电池实测") 的曲线记录真实温度历史 */
+  $('m-batt', _dom).innerHTML = (tempC >= 0 ? tempC.toFixed(1) : '--') + '<sup>°C</sup>';
   if (tempC > 0) pushBatt(tempC);
-  /* tile-pri("伪装写入") 的曲线记录目标温度（_initDone 后 cfg 已加载） */
   if (_initDone) pushTemp(cfg.target_temp);
-  const pg = document.getElementById('page-status');
+  const pg = $('page-status', _dom);
   if (pg && tempC > 0) {
-    const isDark = document.documentElement.classList.contains('theme-dark') ||
-      (!document.documentElement.classList.contains('theme-light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if      (tempC >= 40) pg.style.background = 'linear-gradient(180deg,' + (isDark ? '#2a1008' : '#fff2e8') + ' 0%,var(--clr-background) 200px)';
-    else if (tempC >= 35) pg.style.background = 'linear-gradient(180deg,' + (isDark ? '#2a1a08' : '#fff8f0') + ' 0%,var(--clr-background) 200px)';
+    if      (tempC >= 40) pg.style.background = 'linear-gradient(180deg,' + (_cachedIsDark ? '#2a1008' : '#fff2e8') + ' 0%,var(--clr-background) 200px)';
+    else if (tempC >= 35) pg.style.background = 'linear-gradient(180deg,' + (_cachedIsDark ? '#2a1a08' : '#fff8f0') + ' 0%,var(--clr-background) 200px)';
     else                  pg.style.background = '';
   }
 
-  /* ── 充电状态（与 C 端 is_charging 对齐） ── */
   const chgStatus = (statusRaw || '').trim();
   const statusChg = chgStatus === 'Charging' || chgStatus === 'Full';
   const usbPresent = parseInt(usbPresentRaw || '0') === 1;
   const usbOnline  = parseInt(usbOnlineRaw  || '0') === 1;
   const acOnline   = parseInt(acOnlineRaw   || '0') === 1;
   const charging   = statusChg && (usbPresent || usbOnline || acOnline);
-  const bc = document.getElementById('badge-chg');
+  const bc = $('badge-chg', _dom);
   if (charging) { bc.textContent = '充电中'; bc.className = 'status-chip charging'; document.body.classList.add('charging'); }
   else          { bc.textContent = '未充电'; bc.className = 'status-chip'; document.body.classList.remove('charging'); }
 
-
-  /* ── 电量 ── */
   const soc     = parseInt(capacityRaw || '-1');
   const chipSoc = parseInt(chipSocRaw  || '-1');
-  document.getElementById('soc-disp-num').textContent = soc >= 0 ? soc : '--';
-  document.getElementById('soc-disp').textContent     = soc >= 0 ? soc : '--';
-  document.getElementById('soc-real').textContent     = chipSoc >= 0 ? chipSoc : '--';
-  const socRealRow = document.getElementById('soc-real')?.closest('.soc-detail-row');
+  $('soc-disp-num', _dom).textContent = soc >= 0 ? soc : '--';
+  $('soc-disp', _dom).textContent     = soc >= 0 ? soc : '--';
+  $('soc-real', _dom).textContent     = chipSoc >= 0 ? chipSoc : '--';
+  const socRealRow = $('soc-real', _dom)?.closest('.soc-detail-row');
   if (socRealRow) socRealRow.style.display = _deviceBrand === 'xiaomi' ? 'none' : '';
   updateSocRing(soc >= 0 ? soc : 0);
 
-  /* ── 电压 µV → mV ── */
   const voltUv = parseInt(voltRaw || '0');
   const voltMv = voltUv > 0 ? Math.round(voltUv / 1000) : null;
-  document.getElementById('b-volt').textContent = voltMv ? voltMv : '--';
+  $('b-volt', _dom).textContent = voltMv ? voltMv : '--';
 
-  /* ── 电流 µA → mA ── */
   const currMaRaw = parseInt(currRaw || '0');
   const currMa = currMaRaw;
-  document.getElementById('b-curr').textContent = currMa;
+  $('b-curr', _dom).textContent = currMa;
 
-  /* ── 功率 W ── */
   const watt = (voltMv && currMa) ? ((voltMv / 1000) * Math.abs(currMa) / 1000).toFixed(2) : null;
-  document.getElementById('b-watt').textContent = watt ? watt : '--';
-  const cellCurr = document.getElementById('cell-curr');
+  $('b-watt', _dom).textContent = watt ? watt : '--';
+  const cellCurr = $('cell-curr', _dom);
   if (cellCurr) cellCurr.classList.toggle('charging-hi', charging && currMa > 0);
 
-  /* ── 循环 ── */
   const cycle = parseInt(cycleRaw || '-1');
-  document.getElementById('b-cycle').textContent = cycle >= 0 ? cycle : '--';
+  $('b-cycle', _dom).textContent = cycle >= 0 ? cycle : '--';
 
-  /* ── 伪装温度：直接从 cfg 读，不依赖 sysfs ── */
-  if (_initDone) document.getElementById('m-target').innerHTML = cfg.target_temp + '<sup>°C</sup>';
+  if (_initDone) $('m-target', _dom).innerHTML = cfg.target_temp + '<sup>°C</sup>';
 
-  /* ── 进程状态 ── */
   if (pidRaw) {
     const pid = pidRaw.trim().split(/\s+/)[1] || '';
-    document.getElementById('proc-pid').textContent = pid ? 'PID ' + pid : '—';
-    const dot = document.getElementById('proc-dot'), st = document.getElementById('proc-status');
+    $('proc-pid', _dom).textContent = pid ? 'PID ' + pid : '—';
+    const dot = $('proc-dot', _dom), st = $('proc-status', _dom);
     if (pid) {
       dot.className = 'pid-dot ok'; st.textContent = '运行中'; st.className = 'pid-badge';
     } else {
       dot.className = 'pid-dot err'; st.textContent = '离线'; st.className = 'pid-badge off';
     }
   }
-  if (model) document.getElementById('i-model').textContent = model;
-  if (ver) document.getElementById('about-ver').textContent = ver + ' · 作者：石板上回荡的';
-  /* 同步充电开启状态 */
-  if (_initDone && typeof syncChgGateList === 'function') syncChgGateList();
+  if (model) $('i-model', _dom).textContent = model;
+  if (ver) $('about-ver', _dom).textContent = ver + ' · 作者：石板上回荡的';
+  if (_initDone && typeof syncChgGateList === 'function') debounce(syncChgGateList, 50);
   } finally { _refreshing = false; }
 }
 
-/* ─── 充电控制子页 ─── */
 function openChargingPage() {
   applyChargingPanel();
   switchSlide('charging', 'left');
@@ -134,7 +147,6 @@ async function stopService() {
   setTimeout(refreshStatus, 800);
 }
 
-/* ─── 品牌检测（运行时一次性） ─── */
 let _deviceBrand = '';   /* xiaomi / oplus / unknown */
 let _deviceName  = '';   /* 商业机型名 */
 
@@ -162,7 +174,6 @@ async function detectDevice() {
     _deviceBrand = 'unknown';
   }
 
-  /* 打招呼 */
   const el = document.getElementById('greeting-text');
   if (el) {
     if (name) {
@@ -173,7 +184,6 @@ async function detectDevice() {
     /* unknown 且无商业名：不显示，避免用代号 */
   }
 
-  /* 阴阳页 */
   applyChargingPanel();
 }
 
@@ -218,7 +228,6 @@ function onDebugToggle() {
   applyChargingPanel();
 }
 
-/* ─── MMI 伪旁路（OPPO/一加/真我） ─── */
 function onMmiToggle() {
   const sw = document.getElementById('sw-mmi');
   const ic = document.getElementById('mmi-icon');
@@ -277,8 +286,8 @@ function onPlugToggle() {
   }, 0);
 }
 
-/* 伪插拔调节 */
-const PLUG_INTERVALS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; /* 0=关 */
+/* 伪插拔间隔列表 */
+const PLUG_INTERVALS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 function adjPlug(key, delta) {
   if (key === 'interval') {
     let idx = PLUG_INTERVALS.indexOf(cfg.plug_interval);
@@ -332,7 +341,6 @@ async function refreshChargingPage() {
   if (bpIcon) bpIcon.style.background = cfg.bypass
     ? 'color-mix(in srgb,var(--clr-primary-container) 80%,transparent)'
     : 'color-mix(in srgb,var(--clr-secondary-container) 60%,transparent)';
-  /* oplus 面板 */
   if (_deviceBrand === 'oplus') {
     const sw = document.getElementById('sw-mmi');
     if (sw) { sw.checked = !!cfg.mmi_bypass; onMmiToggle(); }
@@ -342,4 +350,57 @@ async function refreshChargingPage() {
     if (swComp) { swComp.checked = !!cfg.oplus_comp; onCompToggle(); }
     syncPlugUI();
   }
+}
+
+function socColor(pct) {
+  if (pct >= 60) return '#4CAF50';
+  if (pct >= 30) return '#FF9800';
+  return '#F44336';
+}
+function updateSocRing(pct) {
+  const circ = 314.16;
+  const offset = circ * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  const arc = $('soc-ring-arc', _dom);
+  const fill = $('soc-fill', _dom);
+  if (!arc && !fill) return;
+  const col = socColor(pct);
+  if (arc) { arc.style.strokeDashoffset = offset.toFixed(2); arc.style.stroke = col; }
+  if (fill) { fill.style.width = Math.min(pct,100) + '%'; fill.style.background = col; }
+}
+
+const battHistory = [];
+function pushBatt(v) {
+  if (typeof v === 'number' && v > 0) { battHistory.push(v); if (battHistory.length > 30) battHistory.shift(); }
+  drawBattSparkline();
+}
+function drawBattSparkline() {
+  const c = document.getElementById('sparkline-batt'); if (!c) return;
+  const W = c.offsetWidth || 120, H = 28, dpr = window.devicePixelRatio || 1;
+  c.width = W * dpr; c.height = H * dpr;
+  const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+  if (battHistory.length < 2) { ctx.clearRect(0,0,W,H); return; }
+  const mn = Math.min(...battHistory)-1, mx = Math.max(...battHistory)+1;
+  const pts = battHistory.map((v,i) => ({ x: i/(battHistory.length-1)*W, y: H-(v-mn)/(mx-mn)*(H-6)-3 }));
+  const pr = _cachedSecondary;
+  ctx.beginPath(); ctx.moveTo(pts[0].x, H);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length-1].x, H); ctx.closePath();
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, pr+'55'); g.addColorStop(1, pr+'00');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i=1; i<pts.length; i++) {
+    const mx2 = (pts[i-1].x + pts[i].x)/2;
+    ctx.bezierCurveTo(mx2,pts[i-1].y, mx2,pts[i].y, pts[i].x,pts[i].y);
+  }
+  ctx.strokeStyle = pr; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke();
+}
+
+function parseUevent(raw) {
+  const m = {};
+  raw.split('\n').forEach(l => {
+    const i = l.indexOf('=');
+    if (i > 0) m[l.slice(0, i).trim()] = l.slice(i + 1).trim();
+  });
+  return m;
 }

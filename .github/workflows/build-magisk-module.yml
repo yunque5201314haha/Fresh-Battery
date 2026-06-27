@@ -25,12 +25,18 @@ jobs:
           MODULE_ID=$(grep '^id=' module.prop | cut -d= -f2)
           MODULE_VER=$(grep '^version=' module.prop | cut -d= -f2)
           BUILD_NUM=${{ github.run_number }}
-          ZIP_NAME="${MODULE_ID}-${MODULE_VER}-${BUILD_NUM}.zip"
+          # 标签构建使用无编号的 zip 名，确保 update.json URL 可预测
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            ZIP_NAME="${MODULE_ID}-${MODULE_VER}.zip"
+          else
+            ZIP_NAME="${MODULE_ID}-${MODULE_VER}-${BUILD_NUM}.zip"
+          fi
           echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
           echo "MODULE_VER=${MODULE_VER}" >> $GITHUB_ENV
           echo "BUILD_NUM=${BUILD_NUM}" >> $GITHUB_ENV
           mkdir -p _module
           cp -r META-INF webroot customize.sh module.prop service.sh uninstall.sh MAIN _module/
+          cp update.json changelog.md _module/ 2>/dev/null || true
           cd _module && zip -r0 "../${ZIP_NAME}" . && cd ..
 
       - name: Prepare Telegram message

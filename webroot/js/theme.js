@@ -1,7 +1,11 @@
-/* ─── Theme globals ─── */
 let cfg = { target_temp:34, svc:0, cc:0, cpu:0, cap:0, bypass:0, currlimit:0, currma:22000, font:'noto', mmi_bypass:0, plug_interval:0, plug_level:80, plc_charge:0, oplus_comp:0, comp_wifi:0, comp_audio:0 };
+let _cachedPrimary = '';
 
-/* ─── Temp slider ─── */
+function themeRefreshStyleCache() {
+  const cs = getComputedStyle(document.documentElement);
+  _cachedPrimary = (cs.getPropertyValue('--clr-primary').trim() || '#6750A4');
+}
+
 function syncSlider(el) {
   el.style.setProperty('--pct', ((+el.value - +el.min) / (+el.max - +el.min) * 100).toFixed(1) + '%');
 }
@@ -26,7 +30,7 @@ function setPreset(t) {
   drawGauge(t);
 }
 
-/* ─── Temp sparkline history ─── */
+/* 温度变化曲线历史 */
 const tempHistory = [];
 function pushTemp(v) {
   if (typeof v === 'number' && v > 0) { tempHistory.push(v); if (tempHistory.length > 30) tempHistory.shift(); }
@@ -40,8 +44,7 @@ function drawSparkline() {
   if (tempHistory.length < 2) { ctx.clearRect(0,0,W,H); return; }
   const mn = Math.min(...tempHistory)-.5, mx = Math.max(...tempHistory)+.5;
   const pts = tempHistory.map((v,i) => ({ x:i/(tempHistory.length-1)*W, y:H-(v-mn)/(mx-mn)*(H-6)-3 }));
-  const cs = getComputedStyle(document.documentElement);
-  const pr = cs.getPropertyValue('--clr-primary').trim() || '#6750A4';
+  const pr = _cachedPrimary;
   ctx.beginPath(); ctx.moveTo(pts[0].x, H);
   pts.forEach(p => ctx.lineTo(p.x, p.y));
   ctx.lineTo(pts[pts.length-1].x, H); ctx.closePath();
@@ -56,7 +59,7 @@ function drawSparkline() {
   ctx.strokeStyle = pr; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke();
 }
 
-/* ─── Gauge ─── */
+/* Gauge */
 function drawGauge(val) {
   const arc = document.getElementById('gauge-arc-outer');
   if (!arc) return;
@@ -68,17 +71,16 @@ function drawGauge(val) {
   if (el) el.innerHTML = val + '<small>°C</small>';
 }
 
-/* ─── Wall chip ─── */
+/* 温度墙显示 */
 function updateWallChip(t) {
   const el = document.getElementById('wall-val');
   if (el) el.textContent = '温度墙: ' + (t + 15) + '°C';
 }
 
-/* ─── KSU Monet Dynamic Colors ─── */
+/* colors.css 只在 KernelSU WebView 内由系统注入；
+   直接切换 disabled 在 Android WebView 中不会触发真正重载，
+   改用 cache-bust href 替换，强制浏览器重新请求 */
 function reloadKsuColors() {
-  /* colors.css 只在 KernelSU WebView 内由系统注入；
-     直接切换 disabled 在 Android WebView 中不会触发真正重载，
-     改用 cache-bust href 替换，强制浏览器重新请求 */
   try {
     const lnk = document.querySelector('link[href*="mui.kernelsu.org/internal/colors"]');
     if (!lnk) return;
@@ -88,7 +90,6 @@ function reloadKsuColors() {
 }
 /* 系统深/浅色主题切换时重新加载 colors.css，避免变量冻结 */
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', reloadKsuColors);
-/* ─── Current slider ─── */
 function onCurrSlider(el) {
   syncSlider(el);
   cfg.currma = +el.value;

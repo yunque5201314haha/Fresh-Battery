@@ -1,4 +1,3 @@
-/* ─── 左滑手势（配置页 ↔ 充电详情）─── */
 (function initSwipeGesture() {
   let startX = 0, startY = 0, pointerId = null, decided = false, isHoriz = false;
   const THRESHOLD = 50;
@@ -41,13 +40,14 @@
   main.addEventListener('pointercancel', e => { if (e.pointerId === pointerId) pointerId = null; });
 })();
 
-/* ─── Init ─── */
 (async () => {
   /* 立即显示 UI，不让用户白屏等待 */
   document.body.style.opacity = '1';
 
   if (typeof ksu !== 'undefined' && ksu.fullScreen) ksu.fullScreen(true);
   await loadConfig();
+  if (typeof refreshStyleCache === 'function') refreshStyleCache();
+  if (typeof themeRefreshStyleCache === 'function') themeRefreshStyleCache();
   await Promise.all([refreshStatus(), detectDevice()]);
   /* 等待 @material/web 组件注册完成，避免淡入时出现未升级的裸元素闪烁；
      但最多等 1.5s——没网络/CDN 加载失败时也要正常显示界面 */

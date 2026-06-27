@@ -1,5 +1,4 @@
 /*
- * Temperature - 充电温度伪装
  * gcc -O2 -o MAIN main.c -lpthread
  */
 
@@ -17,7 +16,6 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-/* ── 节点路径 ── */
 #define SHELL_TEMP   "/proc/shell-temp"
 #define REAL_TEMP    "/sys/class/oplus_chg/battery/temp"
 #define CHG_STATUS   "/sys/class/power_supply/battery/status"
@@ -39,7 +37,6 @@
 #define BAT_CHGCURR  "/sys/class/power_supply/battery/charge_full"
 #define BAT_CHGFULL  "/sys/class/power_supply/battery/charge_full_design"
 
-/* 电流控制节点 */
 static const char *CURR_NODES[] = {
     "/sys/class/power_supply/battery/constant_charge_current_max",
     "/sys/class/power_supply/battery/fast_charge_current",
@@ -61,7 +58,6 @@ static const char *CURR_VOTABLE_ACT[] = {
     "/proc/oplus-votable/WIRED_CURR_CTRL/force_active",
     NULL
 };
-/* 温度伪装节点（所有可能存在的，依次尝试挂载） */
 static const char *TEMP_NODES[] = {
     "/sys/class/power_supply/battery/temp",
     "/sys/class/oplus_chg/battery/temp",
@@ -70,55 +66,50 @@ static const char *TEMP_NODES[] = {
     "/sys/devices/platform/soc/soc:oplus,mms_gauge/oplus_mms/gauge/battery/temp",
     NULL
 };
-/* 电量伪装节点 */
 #define CAP_TARGET  "/sys/class/power_supply/battery/capacity"
-/* 欧加亮屏限制节点 */
 #define NORM_COOLDOWN  "/sys/class/oplus_chg/battery/normal_cool_down"
 #define COOLDOWN       "/sys/class/oplus_chg/battery/cool_down"
 
-#define BYPASS_CURR_UA  500000   /* 伪旁路：500mA，内核最低有效限制 */
+#define BYPASS_CURR_UA  500000
 #define MI_CHG_CURR     "/sys/class/power_supply/battery/constant_charge_current"
 
 #define MODDIR_DEF   "/data/adb/modules/Fresh-Battery"
 #define PLEN         512
 
 static char g_moddir[PLEN];
-static char g_cfg[PLEN];       /* config 文件路径 */
-static char g_pids[PLEN];      /* pids 文件路径 */
-static char g_fake_cc[PLEN];   /* fake_cc 文件路径 */
-static char g_fake_soc[PLEN];  /* fake_soc 文件路径 */
-static char g_fake_cap[PLEN];  /* fake_cap 文件路径（电量伪装） */
-static char g_fake_temp[PLEN]; /* fake_temp 文件路径（温度伪装） */
+static char g_cfg[PLEN];
+static char g_pids[PLEN];
+static char g_fake_cc[PLEN];
+static char g_fake_soc[PLEN];
+static char g_fake_cap[PLEN];
+static char g_fake_temp[PLEN];
 
-/* ── 配置 ── */
 typedef struct {
-    int target_temp;   /* 摄氏度，默认 34 */
+    int target_temp;
     int svc_enabled;
     int cc_spoof;
     int cpu_unlock;
-    int cap_mount;     /* 电量挂载（旧） */
-    int bypass_charge; /* MI伪旁路充电全局开关（小米），默认关 */
-    int curr_limit;    /* 充电电流限制开关，默认关 */
-    int curr_max_ma;   /* 最大电流 mA，默认 22000 */
-    int mmi_bypass;    /* oplus mmi_charging_enable 旁路，开=写0，默认关 */
-    int plug_interval; /* 伪插拔间隔分钟，0=关闭，默认0 */
-    int plug_level;    /* 伪插拔电量阈值%，低于此值才执行，默认80 */
-    int plc_charge;    /* 全场景伪Osys旁路充电特性注入，默认关 */
-    int oplus_comp;   /* 组件控制，默认关 */
-    /* 公共页伪装功能 */
-    int chg_gate;      /* 充电开启总控，默认关 */
-    int cap_spoof;     /* 电量伪装，默认关 */
-    int cap_spoof_val; /* 电量伪装值，默认80 */
-    int temp_spoof;    /* 温度伪装，默认关 */
-    int temp_spoof_val;/* 温度伪装值，默认34 */
-    int cc_spoof_val;  /* 循环伪装值，默认10 */
-    int status_spoof;  /* 充放状态伪装，默认关 */
-    int chg_unlock;    /* 亮屏充电限制，默认关 */
+    int cap_mount;
+    int bypass_charge;
+    int curr_limit;
+    int curr_max_ma;
+    int mmi_bypass;
+    int plug_interval;
+    int plug_level;
+    int plc_charge;
+    int oplus_comp;
+    int chg_gate;
+    int cap_spoof;
+    int cap_spoof_val;
+    int temp_spoof;
+    int temp_spoof_val;
+    int cc_spoof_val;
+    int status_spoof;
+    int chg_unlock;
 } Config;
 
 static const Config CFG_DEF = {34, 0, 0, 0, 0, 0, 0, 22000, 0, 0, 0, 80, 0, 0, 0, 0, 0, 80, 0, 34, 10, 0, 0};
 
-/* ── I/O 工具 ── */
 static int rd_int(const char *p) {
     int fd = open(p, O_RDONLY | O_CLOEXEC);
     if (fd < 0) return -1;
@@ -126,7 +117,6 @@ static int rd_int(const char *p) {
     int n = read(fd, buf, 31);
     close(fd);
     if (n <= 0) return -1;
-    /* 跳过前导空白，确保首个有效字符是数字或负号 */
     char *s = buf;
     while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') s++;
     if (*s == 0 || (!(*s >= '0' && *s <= '9') && *s != '-')) return -1;
@@ -136,7 +126,8 @@ static int rd_int(const char *p) {
 static void wr_str(const char *p, const char *v) {
     int fd = open(p, O_WRONLY | O_CLOEXEC);
     if (fd < 0) return;
-    write(fd, v, strlen(v));
+    ssize_t r = write(fd, v, strlen(v));
+    (void)r;
     close(fd);
 }
 
@@ -149,23 +140,17 @@ static void mkdirp(const char *path) {
     mkdir(tmp, 0755);
 }
 
-/* ── 配置解析 ── */
 static int cfg_get(const char *buf, const char *key) {
     char search[64];
     snprintf(search, sizeof(search), "%s", key);
     const char *p = buf;
     size_t klen = strlen(key);
     while ((p = strstr(p, key)) != NULL) {
-        /* 确保是行首 */
         if (p != buf && *(p - 1) != '\n') { p++; continue; }
-        /* 跳过 key */
         const char *q = p + klen;
-        /* 跳过可选空格 */
         while (*q == ' ' || *q == '\t') q++;
-        /* 必须是 '=' */
         if (*q != '=') { p++; continue; }
         q++;
-        /* 跳过 '=' 后可选空格 */
         while (*q == ' ' || *q == '\t') q++;
         return atoi(q);
     }
@@ -176,14 +161,12 @@ static Config parse_config(void) {
     Config c = CFG_DEF;
     FILE *f = fopen(g_cfg, "r");
     if (!f) return c;
-    /* 读整个文件到 buf */
-    fseek(f, 0, SEEK_END);
-    long sz = ftell(f);
-    rewind(f);
-    if (sz <= 0 || sz > 4096) { fclose(f); return c; }
+    struct stat st;
+    if (fstat(fileno(f), &st) != 0 || st.st_size <= 0 || st.st_size > 4096) { fclose(f); return c; }
+    long sz = st.st_size;
     char *buf = malloc(sz + 1);
     if (!buf) { fclose(f); return c; }
-    fread(buf, 1, sz, f);
+    if (fread(buf, 1, sz, f) != (size_t)sz) { free(buf); fclose(f); return c; }
     fclose(f);
     buf[sz] = 0;
 
@@ -213,7 +196,7 @@ static Config parse_config(void) {
     return c;
 }
 
-/* 带 stat 防抖的缓存版本：mtime 未变则直接返回上次结果 */
+/* 带 stat 防抖的缓存：mtime 未变直接返回上次结果 */
 static pthread_mutex_t cfg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static Config parse_config_cached(void) {
@@ -224,7 +207,6 @@ static Config parse_config_cached(void) {
     if (stat(g_cfg, &st) != 0) return s_init ? s_cache : CFG_DEF;
     if (s_init && st.st_mtime == s_mtime) return s_cache;
     pthread_mutex_lock(&cfg_mutex);
-    /* 二次检查：拿到锁后确认 mtime 未变 */
     if (stat(g_cfg, &st) == 0 && (!s_init || st.st_mtime != s_mtime)) {
         s_cache = parse_config();
         s_mtime = st.st_mtime;
@@ -275,8 +257,10 @@ static void write_config(const Config *c) {
     chmod(g_cfg, 0666);
 }
 
-/* ── 温度写入 ── */
 static void write_temp(int celsius) {
+    static int last = -999;
+    if (celsius == last) return;
+    last = celsius;
     int fd = open(SHELL_TEMP, O_WRONLY | O_CLOEXEC);
     if (fd < 0) return;
     int millideg = celsius * 1000;
@@ -288,7 +272,6 @@ static void write_temp(int celsius) {
     close(fd);
 }
 
-/* ── 充电检测 ── */
 static int is_charging(void) {
     char buf[32] = {0};
     int fd = open(CHG_STATUS, O_RDONLY | O_CLOEXEC);
@@ -301,7 +284,6 @@ static int is_charging(void) {
     return 0;
 }
 
-/* ── 充电解锁 ── */
 static void chg_unlock_on(void) {
     system("stop horae 2>/dev/null");
     wr_str(COOL_DN_VAL, "0\n");
@@ -319,20 +301,17 @@ static void chg_unlock_off(void) {
     system("setprop persist.vendor.charge.thermal.control 1 2>/dev/null");
 }
 
-/* ── CPU 频率限制 ── */
 static void cpu_limit_off(void) {
     wr_str(CPU_FREQ_LMT, "1\n");
     system("setprop persist.vendor.enable.cpulimit false 2>/dev/null");
 }
 static void cpu_limit_on(void)  { wr_str(CPU_FREQ_LMT, "0\n"); }
 
-/* ── MI伪旁路充电：全局将电流限制到 500mA ── */
 static void bypass_charge_on(void) {
     char ua_str[32];
     snprintf(ua_str, sizeof(ua_str), "%d\n", BYPASS_CURR_UA);
     for (int i = 0; CURR_NODES[i]; i++)
         if (access(CURR_NODES[i], W_OK) == 0) wr_str(CURR_NODES[i], ua_str);
-    /* votable: 500mA = 500 (单位 mA) */
     for (int i = 0; CURR_VOTABLE_VAL[i]; i++) {
         if (access(CURR_VOTABLE_VAL[i], W_OK)) continue;
         if (access(CURR_VOTABLE_ACT[i], W_OK)) continue;
@@ -342,13 +321,11 @@ static void bypass_charge_on(void) {
 }
 
 static void bypass_charge_off(void) {
-    /* 释放 votable，恢复系统默认 */
     for (int i = 0; CURR_VOTABLE_ACT[i]; i++)
         if (access(CURR_VOTABLE_ACT[i], W_OK) == 0)
             wr_str(CURR_VOTABLE_ACT[i], "0\n");
 }
 
-/* ── 米系亮屏快充 ── */
 static int saved_mi_curr = -1;
 
 static void mi_chg_unlock(void) {
@@ -380,22 +357,18 @@ static void mi_chg_set(int temp) {
         wr_str(MI_CHG_CURR, "500000\n");
 }
 
-/* ── oplus mmi_charging_enable 旁路 ── */
 #define MMI_CHG_ENABLE "/sys/class/oplus_chg/battery/mmi_charging_enable"
 
 static void mmi_bypass_on(void) {
-    /* 开启旁路：写 0 禁止充电 */
     if (access(MMI_CHG_ENABLE, W_OK) == 0)
         wr_str(MMI_CHG_ENABLE, "0\n");
 }
 
 static void mmi_bypass_off(void) {
-    /* 关闭旁路：写 1 恢复充电 */
     if (access(MMI_CHG_ENABLE, W_OK) == 0)
         wr_str(MMI_CHG_ENABLE, "1\n");
 }
 
-/* ── 全场景伪Osys旁路充电特性注入 ── */
 #define PLC_TARGET "/my_product/etc/extension/com.oplus.app-features.xml"
 #define PLC_FEATURES_CONTENT \
     "\t<app_feature name=\"com.oplus.plc_charge.support\">\n" \
@@ -404,25 +377,51 @@ static void mmi_bypass_off(void) {
     "\t<app_feature name=\"com.oplus.fullscene_plc_charge.support\" args=\"boolean:true\"/>\n" \
     "\t<app_feature name=\"com.oplus.reversecharge\" args=\"boolean:true\"/>"
 
+static int file_contains(const char *path, const char *needle) {
+    FILE *f = fopen(path, "r");
+    if (!f) return 0;
+    char buf[256];
+    while (fgets(buf, sizeof(buf), f)) {
+        if (strstr(buf, needle)) { fclose(f); return 1; }
+    }
+    fclose(f);
+    return 0;
+}
+
 static void plc_charge_on(const char *moddir) {
     if (access(PLC_TARGET, F_OK) != 0) return;
-    if (system("grep -q 'com.oplus.plc_charge.support' '" PLC_TARGET "' 2>/dev/null") == 0) return;
+    if (file_contains(PLC_TARGET, "com.oplus.plc_charge.support")) return;
 
-    /* 把特性内容写到独立文件，awk 引用该文件，避免 shell 转义地狱 */
-    char feat[PLEN], tmp[PLEN], cmd[PLEN * 3];
+    char feat[PLEN], tmp[PLEN];
     snprintf(feat, sizeof(feat), "%s/fake/plc_feat.txt", moddir);
     snprintf(tmp,  sizeof(tmp),  "%s/fake/plc_features.xml", moddir);
-
     FILE *f = fopen(feat, "w");
     if (!f) return;
     fputs(PLC_FEATURES_CONTENT, f);
     fclose(f);
 
-    snprintf(cmd, sizeof(cmd),
-        "awk '/<[/]extend_features>/{while((getline l<\"%s\")>0)print l} {print}' "
-        "'%s' > '%s' && mount --bind '%s' '%s' && restorecon '%s' 2>/dev/null",
-        feat, PLC_TARGET, tmp, tmp, PLC_TARGET, PLC_TARGET);
-    system(cmd);
+    FILE *in = fopen(PLC_TARGET, "r");
+    if (!in) return;
+    FILE *out = fopen(tmp, "w");
+    if (!out) { fclose(in); return; }
+    char line[512];
+    int inserted = 0;
+    while (fgets(line, sizeof(line), in)) {
+        if (!inserted && strstr(line, "</extend_features>")) {
+            FILE *fi = fopen(feat, "r");
+            if (fi) { char fl[256]; while (fgets(fl, sizeof(fl), fi)) fputs(fl, out); fclose(fi); }
+            inserted = 1;
+        }
+        fputs(line, out);
+    }
+    fclose(in);
+    fclose(out);
+
+    if (mount(tmp, PLC_TARGET, NULL, MS_BIND, NULL) == 0) {
+        pid_t pid = fork();
+        if (pid == 0) { execl("/system/bin/restorecon", "restorecon", PLC_TARGET, (char *)NULL); _exit(1); }
+        if (pid > 0) waitpid(pid, NULL, 0);
+    }
 }
 
 static void plc_charge_off(const char *moddir) {
@@ -432,14 +431,11 @@ static void plc_charge_off(const char *moddir) {
     snprintf(p, sizeof(p), "%s/fake/plc_features.xml", moddir); unlink(p);
 }
 
-/* ── 充电电流限制 ── */
 static void curr_limit_apply(int ma) {
-    /* sysfs 节点单位是微安 */
     char ua_str[32];
     snprintf(ua_str, sizeof(ua_str), "%d\n", ma * 1000);
     for (int i = 0; CURR_NODES[i]; i++)
         if (access(CURR_NODES[i], W_OK) == 0) wr_str(CURR_NODES[i], ua_str);
-    /* votable 单位是 mA */
     char ma_str[32];
     snprintf(ma_str, sizeof(ma_str), "%d\n", ma);
     for (int i = 0; CURR_VOTABLE_VAL[i]; i++) {
@@ -456,7 +452,6 @@ static void curr_limit_off(void) {
             wr_str(CURR_VOTABLE_ACT[i], "0\n");
 }
 
-/* ── 循环伪装 mount/umount （可配置值）── */
 static void cc_mount_val(int val) {
     char dir[PLEN];
     snprintf(dir, sizeof(dir), "%s/fake", g_moddir);
@@ -478,7 +473,6 @@ static void cc_umount(void) {
     unlink(g_fake_cc);
 }
 
-/* ── 公共页：电量伪装 mount/umount（可配置值）── */
 static void cap_spoof_mount(int val) {
     char dir[PLEN];
     snprintf(dir, sizeof(dir), "%s/fake", g_moddir);
@@ -498,7 +492,6 @@ static void cap_spoof_umount(void) {
     unlink(g_fake_cap);
 }
 
-/* ── 公共页：温度伪装 mount/umount（可配置值，写入 decicelsius）── */
 static void temp_spoof_mount(int val) {
     char dir[PLEN];
     snprintf(dir, sizeof(dir), "%s/fake", g_moddir);
@@ -523,7 +516,6 @@ static void temp_spoof_umount(void) {
     unlink(g_fake_temp);
 }
 
-/* ── 公共页：充放状态伪装 mount/umount ── */
 static void status_spoof_mount(const char *val) {
     char p[PLEN];
     snprintf(p, sizeof(p), "%s/fake/fakestatus", g_moddir);
@@ -546,21 +538,14 @@ static void status_spoof_umount(void) {
     unlink(p);
 }
 
-/* ── 公共页：解除亮屏充电限制（OPPO 系写 cool_down）── */
 static void unlock_chg_on(void) {
     if (access(COOLDOWN, F_OK) == 0) {
         wr_str(NORM_COOLDOWN, "0\n");
         wr_str(COOLDOWN, "0\n");
     }
-    /* MI系通过 mi_chg_set 在主循环处理 */
 }
-static void unlock_chg_off(void) {
-    /* cool_down 恢复：不主动写回，由系统默认值接管 */
-    /* 通过 umount 或者后续系统行为恢复 */
-    /* 对于OPPO系，我们只需停止写入即可 */
-}
+static void unlock_chg_off(void) {}
 
-/* ── 电量挂载 mount/umount ── */
 static void cap_mount(void) {
     mount(CHIP_SOC, BAT_CAP, NULL, MS_BIND, NULL);
 }
@@ -569,8 +554,6 @@ static void cap_umount(void) {
     umount2(BAT_CAP, MNT_DETACH);
 }
 
-/* ── 充电日志 ── */
-/* new_session=1 时截断文件（新一次充电），否则追加 */
 static void *thr_chg(void *arg) {
     (void)arg;
     while (access(COOL_DN_ACT, F_OK) != 0) sleep(2);
@@ -587,26 +570,21 @@ static void *thr_chg(void *arg) {
         int was_chg  = strcmp(prev, "Charging") == 0 || strcmp(prev, "Full") == 0;
 
         if (now_chg && !was_chg) {
-            /* 充电开始 */
             chg_unlock_on();
             if (c.cpu_unlock) cpu_limit_off();
-            /* 米系亮屏快充：解锁节点 */
             if (access(MI_CHG_CURR, F_OK) == 0) {
                 mi_chg_unlock();
                 mi_unlocked = 1;
             }
         } else if (!now_chg && was_chg) {
-            /* 充电停止 */
             chg_unlock_off();
             if (c.cpu_unlock) cpu_limit_on();
-            /* 米系亮屏快充：恢复 */
             if (mi_unlocked) {
                 mi_chg_restore();
                 mi_unlocked = 0;
             }
         }
 
-        /* 充电中：每轮按温度动态调电流 */
         if (now_chg && mi_unlocked) {
             int temp = read_batt_temp();
             if (temp >= 0) mi_chg_set(temp);
@@ -618,25 +596,20 @@ static void *thr_chg(void *arg) {
     return NULL;
 }
 
-/* ── 伪插拔线程 ── */
 static void *thr_plug(void *arg) {
     (void)arg;
     for (;;) {
         sleep(10);
         Config c = parse_config_cached();
 
-        /* 关闭→开启检测：interval 从0变非0时重置计时器 */
-        static time_t s_last         = -1;  /* -1=未初始化 */
+        static time_t s_last         = -1;
         static int    s_prev_interval = 0;
         int cur_interval = c.plug_interval;
-        /* 记录上一轮interval（无论是否跳过，都要更新） */
         int was_off = (s_prev_interval == 0);
         s_prev_interval = cur_interval;
 
-        /* 伪旁路开启时不运行；间隔为0时不运行 */
         if (c.mmi_bypass || cur_interval <= 0) continue;
 
-        /* 检查充电状态 */
         char status[32] = {0};
         int fd = open(CHG_STATUS, O_RDONLY | O_CLOEXEC);
         if (fd >= 0) { read(fd, status, 31); close(fd); }
@@ -644,18 +617,15 @@ static void *thr_plug(void *arg) {
         int charging = (strcmp(status, "Charging") == 0 || strcmp(status, "Full") == 0);
         if (!charging) continue;
 
-        /* 检查电量 */
         int soc = rd_int(CHIP_SOC);
         if (soc < 0) soc = rd_int(BAT_CAP);
         if (soc < 0 || soc >= c.plug_level) continue;
 
-        /* 等待间隔到期；首次或刚从关闭状态开启时重置为当前时刻，不立即触发 */
         time_t now = time(NULL);
         if (s_last == -1 || was_off) s_last = now;
         if (now - s_last < (time_t)(cur_interval * 60)) continue;
         s_last = now;
 
-        /* 执行伪插拔：写0停充 → 写1恢复 */
         if (access(MMI_CHG_ENABLE, W_OK) == 0)
             wr_str(MMI_CHG_ENABLE, "0\n");
         if (access(MMI_CHG_ENABLE, W_OK) == 0)
@@ -664,9 +634,7 @@ static void *thr_plug(void *arg) {
     return NULL;
 }
 
-/* ── 主循环 ── */
 int main(int argc, char *argv[]) {
-    /* 自动回收子进程，避免僵尸进程 */
     signal(SIGCHLD, SIG_IGN);
 
     strncpy(g_moddir, argc > 1 ? argv[1] : MODDIR_DEF, PLEN - 1);
@@ -678,46 +646,43 @@ int main(int argc, char *argv[]) {
     snprintf(g_fake_temp,sizeof(g_fake_temp),"%s/fake/faketemp",g_moddir);
     snprintf(g_fake_soc,sizeof(g_fake_soc),"%s/sys/class/oplus_chg/battery/fakesoc", g_moddir);
 
-    /* ── 单实例锁：防止多进程竞争写入 sysfs ── */
     int lock_fd = open(g_pids, O_RDWR | O_CREAT, 0644);
     if (lock_fd >= 0 && flock(lock_fd, LOCK_EX | LOCK_NB) < 0) {
-        /* 已有实例持锁，直接退出 */
         close(lock_fd);
         return 0;
     }
 
-    /* 写 PID */
     if (lock_fd >= 0) {
         ftruncate(lock_fd, 0);
         char pid_buf[32];
         snprintf(pid_buf, sizeof(pid_buf), "MAIN %d\n", (int)getpid());
         write(lock_fd, pid_buf, strlen(pid_buf));
-        /* 不关闭 lock_fd，进程退出时内核自动释放 flock */
     }
 
-    /* 确保 fake 目录存在 */
     {
         char fake_dir[PLEN];
         snprintf(fake_dir, sizeof(fake_dir), "%s/fake", g_moddir);
         mkdirp(fake_dir);
     }
 
-    sleep(12);
+    /* 智能等待：检测到 config 或 sysfs 节点就绪后缩短延迟 */
+    for (int i = 0; i < 6; i++) {
+        if (access(g_cfg, F_OK) == 0 && access(REAL_TEMP, F_OK) == 0) break;
+        sleep(1);
+    }
+    sleep(2);
 
-    /* 初始化配置 */
     if (access(g_cfg, F_OK) != 0) write_config(&CFG_DEF);
     chmod(g_cfg, 0666);
 
     Config c = parse_config();
 
-    /* 初始挂载 */
     if (c.cap_mount) cap_mount();
     if (c.cc_spoof)  cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10);
     if (c.cap_spoof)   cap_spoof_mount(c.cap_spoof_val);
     if (c.temp_spoof)  temp_spoof_mount(c.temp_spoof_val);
     if (c.status_spoof) status_spoof_mount("Discharging");
 
-    /* 充电解锁线程 */
     pthread_t t_chg;
     pthread_create(&t_chg, NULL, thr_chg, NULL);
     pthread_detach(t_chg);
@@ -729,64 +694,54 @@ int main(int argc, char *argv[]) {
     int last_state      = 0;
     int cc_mounted      = c.cc_spoof;
     int cap_mounted     = c.cap_mount;
-    int bypass_on       = 0;   /* 伪旁路当前状态 */
-    int curr_lim_on     = 0;   /* 电流限制当前状态 */
-    int last_curr_ma    = 0;   /* 上次写入的电流值，用于脏位检测 */
-    int mmi_on          = 0;   /* O伪旁路充电当前状态 */
-    int plc_on          = 0;   /* 伪Osys旁路充电注入当前状态 */
-    int comp_on         = 0;   /* 组件控制当前状态 */
+    int bypass_on       = 0;
+    int curr_lim_on     = 0;
+    int last_curr_ma    = 0;
+    int mmi_on          = 0;
+    int plc_on          = 0;
+    int comp_on         = 0;
     int tick            = 0;
-    /* 公共页伪装功能状态 */
     int cap_spoof_on    = c.cap_spoof;
     int temp_spoof_on   = c.temp_spoof;
-    int cc_spoof_val_on = c.cc_spoof;  /* 使用 cc_spoof（旧的），但值用 cc_spoof_val */
+    int cc_spoof_val_on = c.cc_spoof;
     int status_spoof_on = c.status_spoof;
     int chg_unlock_on   = c.chg_unlock;
 
     for (;;) {
         c = parse_config_cached();
 
-        /* 同步 cc 挂载（旧功能，使用配置值） */
         if (c.cc_spoof  && !cc_mounted)  { cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10); cc_mounted  = 1; }
         if (!c.cc_spoof &&  cc_mounted)  { cc_umount();  cc_mounted  = 0; }
 
-        /* 同步电量挂载（旧功能） */
-        if (c.cap_mount  && !cap_mounted) { cap_mount();  cap_mounted = 1; }
-        if (!c.cap_mount &&  cap_mounted) { cap_umount(); cap_mounted = 0; }
+        if (c.cap_mount && !cap_mounted) { cap_mount();  cap_mounted = 1; }
+        if (!c.cap_mount && cap_mounted) { cap_umount(); cap_mounted = 0; }
 
-        /* ── 公共页伪装功能（chg_gate=关时全局生效，开时充电专属） ── */
-        /* 电量伪装 */
         if (c.cap_spoof && !cap_spoof_on) {
             cap_spoof_mount(c.cap_spoof_val); cap_spoof_on = 1;
         } else if (!c.cap_spoof && cap_spoof_on) {
             cap_spoof_umount(); cap_spoof_on = 0;
         }
-        /* 温度伪装（电池 sysfs 节点） */
         if (c.temp_spoof && !temp_spoof_on) {
             temp_spoof_mount(c.temp_spoof_val); temp_spoof_on = 1;
         } else if (!c.temp_spoof && temp_spoof_on) {
             temp_spoof_umount(); temp_spoof_on = 0;
         }
-        /* 循环伪装值 */
         if (c.cc_spoof && !cc_spoof_val_on) {
             cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10); cc_spoof_val_on = 1;
         } else if (!c.cc_spoof && cc_spoof_val_on) {
             cc_umount(); cc_spoof_val_on = 0;
         }
-        /* 充放状态伪装 */
         if (c.status_spoof && !status_spoof_on) {
             status_spoof_mount("Discharging"); status_spoof_on = 1;
         } else if (!c.status_spoof && status_spoof_on) {
             status_spoof_umount(); status_spoof_on = 0;
         }
-        /* 解除亮屏充电限制（OPPO cool_down + MI 温度调流） */
         if (c.chg_unlock && !chg_unlock_on) {
             chg_unlock_on = 1;
         } else if (!c.chg_unlock && chg_unlock_on) {
             unlock_chg_off(); chg_unlock_on = 0;
         }
 
-        /* 服务关闭 */
         if (!c.svc_enabled) {
             write_temp(0);
             if (bypass_on)    { bypass_charge_off(); bypass_on = 0; }
@@ -810,28 +765,24 @@ int main(int argc, char *argv[]) {
 
         int chg = is_charging();
 
-        /* ── MI伪旁路充电（全局，不依赖充电状态） ── */
         if (c.bypass_charge && !bypass_on) {
             bypass_charge_on(); bypass_on = 1;
         } else if (!c.bypass_charge && bypass_on) {
             bypass_charge_off(); bypass_on = 0;
         }
 
-        /* ── oplus mmi 旁路（全局） ── */
         if (c.mmi_bypass && !mmi_on) {
             mmi_bypass_on();  mmi_on = 1;
         } else if (!c.mmi_bypass && mmi_on) {
             mmi_bypass_off(); mmi_on = 0;
         }
 
-        /* ── 全场景伪Osys旁路充电特性注入 ── */
         if (c.plc_charge && !plc_on) {
             plc_charge_on(g_moddir);  plc_on = 1;
         } else if (!c.plc_charge && plc_on) {
             plc_charge_off(g_moddir); plc_on = 0;
         }
 
-        /* ── 组件控制 ── */
         if (c.oplus_comp && !comp_on) {
             system("setprop persist.sys.oplus.wifi.sla.game_high_temperature 1 2>/dev/null");
             system("setprop ro.oplus.audio.thermal_control 0 2>/dev/null");
@@ -842,7 +793,6 @@ int main(int argc, char *argv[]) {
             comp_on = 0;
         }
 
-        /* ── 充电电流限制（全局） ── */
         if (c.curr_limit && !curr_lim_on) {
             curr_limit_apply(c.curr_max_ma); curr_lim_on = 1; last_curr_ma = c.curr_max_ma;
         } else if (c.curr_limit && curr_lim_on && c.curr_max_ma != last_curr_ma) {
@@ -854,10 +804,8 @@ int main(int argc, char *argv[]) {
         if (chg) {
             if (last_state != 1) {
                 last_state = 1;
-                /* 用 execv 直接发通知，避免 shell 多层转义 */
                 pid_t pid = fork();
                 if (pid == 0) {
-                    /* 子进程：切换到 uid 2000 发通知 */
                     setuid(2000);
                     char msg[128];
                     snprintf(msg, sizeof(msg),
@@ -873,16 +821,13 @@ int main(int argc, char *argv[]) {
                     execv("/system/bin/cmd", argv_n);
                     _exit(1);
                 }
-                /* 父进程非阻塞等待，避免僵尸进程 */
                 if (pid > 0) waitpid(pid, NULL, WNOHANG);
             }
 
             write_temp(c.target_temp);
 
-            /* ── 解除亮屏充电限制（充电中生效） ── */
             if (chg_unlock_on) {
                 unlock_chg_on();
-                /* MI 系：温度调流 */
                 if (access(MI_CHG_CURR, F_OK) == 0) {
                     int bt = read_batt_temp();
                     if (bt >= 0) mi_chg_set(bt);
@@ -902,7 +847,6 @@ int main(int argc, char *argv[]) {
 
         tick++;
         if (tick % 10 == 0) {
-            /* 定期重写 shell-temp，防止系统覆盖 */
             if (chg) write_temp(c.target_temp);
         }
     }

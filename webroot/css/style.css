@@ -1,13 +1,13 @@
-/* ─────────────────────────────────────────
-   M3 Color Tokens
-   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+/*
+M3 Color Tokens
+
    KernelSU WebView 注入 mui.kernelsu.org/internal/colors.css，
    设置 camelCase 变量：--primary, --onPrimary, --primaryContainer ...
    → --clr-* 通过 var(--primary, fallback) 接收 Monet 取色
    → --md-sys-color-* 别名到 --clr-*，供 @material/web 组件使用
-───────────────────────────────────────── */
+*/
 :root {
-  /* ── --clr-* 从 KernelSU camelCase 变量取值，fallback 为 M3 默认值 ── */
+  /* --clr-* 从 KernelSU camelCase 变量取值，fallback 为 M3 默认值 */
   --clr-primary:              var(--primary, #6750A4);
   --clr-on-primary:           var(--onPrimary, #FFFFFF);
   --clr-primary-container:    var(--primaryContainer, #EADDFF);
@@ -51,7 +51,7 @@
   --clr-inverse-on-surface:   var(--inverseOnSurface, #F4EFF4);
   --clr-inverse-primary:      var(--inversePrimary, #D0BCFF);
 
-  /* ── @material/web 组件读取的官方 token，别名到 --clr-* ── */
+  /* @material/web 组件读取的官方 token，别名到 --clr-* */
   --md-sys-color-primary:                 var(--clr-primary);
   --md-sys-color-on-primary:              var(--clr-on-primary);
   --md-sys-color-primary-container:       var(--clr-primary-container);
@@ -131,7 +131,7 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 
-/* ── 深色模式（跟随系统） ──
+/* 深色模式（跟随系统）
    KernelSU Monet 取色通过 camelCase 变量流入。 */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -180,9 +180,9 @@
   }
 }
 
-/* ─────────────────────────────────────────
-   Reset
-───────────────────────────────────────── */
+/*
+Reset
+*/
 *, *::before, *::after {
   box-sizing: border-box; margin: 0; padding: 0;
   -webkit-tap-highlight-color: transparent;
@@ -195,14 +195,14 @@ html, body {
   transition: background .3s ease, color .3s ease;
 }
 
-/* ─────────────────────────────────────────
-   App Shell
-───────────────────────────────────────── */
+/*
+App Shell
+*/
 #app { display: block; height: 100%; }
 
-/* ─────────────────────────────────────────
-   Content area
-───────────────────────────────────────── */
+/*
+Content area
+*/
 #main {
   height: 100%; overflow: hidden; position: relative;
   background: var(--clr-background);
@@ -210,9 +210,9 @@ html, body {
   contain: layout size;
 }
 
-/* ─────────────────────────────────────────
-   Pages
-───────────────────────────────────────── */
+/*
+Pages
+*/
 .page {
   display: block; position: absolute; inset: 0;
   overflow-y: auto; overflow-x: hidden;
@@ -252,9 +252,9 @@ html, body {
 .page.slide-in-rev  { animation: pg-slide-in-rev  .22s cubic-bezier(.4,0,.2,1) both; }
 .page.slide-out-rev { animation: pg-slide-out-rev .22s cubic-bezier(.4,0,.2,1) both; }
 
-/* ─────────────────────────────────────────
-   底部导航栏 — M3 Navigation Bar 严格规范
-   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+/*
+底部导航栏 — M3 Navigation Bar 严格规范
+
    • 高度: 80dp（标准 M3 Nav Bar）
    • 背景: surfaceContainer
    • 无阴影/描边 (Level 0 elevation)
@@ -262,7 +262,7 @@ html, body {
    • 非活动: on-surface-variant, 纯透明背景
    • 图标: 24dp, 通过 md-icon 渲染
    • 标签: 12sp weight 500, 始终显示
-───────────────────────────────────────── */
+*/
 .tabbar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
@@ -327,14 +327,14 @@ html, body {
   color: var(--clr-on-surface);
 }
 
-/* ─────────────────────────────────────────
-   M3 Top App Bar — Medium variant
-   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+/*
+M3 Top App Bar — Medium variant
+
    • Title: headlineMedium 28sp weight 400
    • 滚动后: elevation Level 2 (3dp)
    • 背景: surface
    • 通过 .top-bar-scrolled class 控制阴影
-───────────────────────────────────────── */
+*/
 .top-bar {
   padding: calc(var(--safe-t) + 4px) 16px 0;
   background: var(--clr-surface);
@@ -371,21 +371,21 @@ html, body {
   min-height: 16px;
 }
 
-/* ─────────────────────────────────────────
-   Page body
-───────────────────────────────────────── */
+/*
+Page body
+*/
 .page-body {
   padding: 0 16px calc(80px + var(--safe-b) + 20px);
   display: flex; flex-direction: column; gap: 12px;
 }
 
-/* ─────────────────────────────────────────
-   M3 Cards — 严格遵循 M3 规范
-   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+/*
+M3 Cards — 严格遵循 M3 规范
+
    Elevated Card: surfaceContainerLow + elev-1 (1dp)
    Filled Card:   surfaceContainerHighest, 无阴影
    形状: --shape-xl-inc (28dp) 保持一致
-───────────────────────────────────────── */
+*/
 .card {
   border-radius: var(--shape-xl-inc);
   background: var(--clr-surface-container-low);
@@ -415,9 +415,9 @@ html, body {
   letter-spacing: 0;
 }
 
-/* ─────────────────────────────────────────
-   Status Page — stat tiles
-───────────────────────────────────────── */
+/*
+Status Page — stat tiles
+*/
 .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* Primary tonal tile */
@@ -552,11 +552,11 @@ canvas.sparkline { width: 100%; height: 32px; display: block; }
   color: var(--clr-on-surface-variant);
 }
 
-/* ─────────────────────────────────────────
-   Buttons — @material/web 官方组件
+/*
+Buttons — @material/web 官方组件
    <md-filled-button>/<md-outlined-button> 自带形状/动效（Shadow DOM），
    这里只调整尺寸（贴近 M3E Medium=56dp）和布局
-───────────────────────────────────────── */
+*/
 md-filled-button, md-outlined-button {
   --md-filled-button-container-height: 56px;
   --md-outlined-button-container-height: 56px;
@@ -575,7 +575,7 @@ md-filled-button, md-outlined-button {
   min-width: 0;
 }
 
-/* ── Web Component CDN 回退 ──
+/* Web Component CDN 回退
    当 @material/web 从 CDN 加载失败（无网络/CDN 被墙/超时），
    自定义元素不会升级，默认 display:inline 导致裸文字。
    :not(:defined) 仅在元素未注册时生效，CDN 正常后自动失效。 */
@@ -626,9 +626,9 @@ md-outlined-button:not(:defined):active {
 .pop { animation: pop .32s var(--motion-spring-bouncy) both; }
 @keyframes pop { 0%{transform:scale(1)} 35%{transform:scale(.94)} 70%{transform:scale(1.04)} 100%{transform:scale(1)} }
 
-/* ─────────────────────────────────────────
-   Config Page
-───────────────────────────────────────── */
+/*
+Config Page
+*/
 /* Gauge — SVG同心圆 */
 .gauge-area {
   padding: 24px 24px 8px;
@@ -685,7 +685,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 }
 
 /* Segmented Buttons — M3 严格规范
-   ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+
    容器: outline 1dp, --clr-outline, pill shape
    选中段: secondary-container 背景, elev-1
    未选中段: 透明背景, on-surface 文字
@@ -858,9 +858,9 @@ md-switch:not(:defined) { display: none; }
 .sw-item.expanded .sw-sub { max-height: 18px; opacity: .6; }
 .sw-trail { margin-left: 16px; flex-shrink: 0; }
 
-/* ─────────────────────────────────────────
-   About Page
-───────────────────────────────────────── */
+/*
+About Page
+*/
 /* Link buttons */
 .link-btn {
   display: flex; align-items: center; justify-content: center; gap: 7px;
@@ -896,11 +896,11 @@ md-switch:not(:defined) { display: none; }
   to   { opacity: 1; transform: none; }
 }
 
-/* ─────────────────────────────────────────
-   Charging — card shimmer
+/*
+Charging — card shimmer
    原理：conic-gradient 旋转制造流光，
    通过 outline + box-shadow 叠加 M3 primary tonal
-───────────────────────────────────────── */
+*/
 @property --chg-angle {
   syntax: '<angle>';
   inherits: false;
@@ -977,12 +977,12 @@ body.charging .card:not(.card-no-chg) > * {
   margin-left: 8px;
 }
 
-/* ── 电池实测 tile 补充 ── */
+/* 电池实测 tile 补充 */
 .tile-sec-temp { gap: 6px; }
 .batt-sparkline-wrap { flex: 1; min-height: 28px; }
 .batt-sparkline-wrap canvas { width: 100%; height: 28px; display: block; }
 
-/* ── 电量进度环 ── */
+/* 电量进度环 */
 .soc-ring-card {
   display: flex; align-items: center; gap: 16px;
   padding: 20px;
@@ -1030,7 +1030,7 @@ body.charging .card:not(.card-no-chg) > * {
   width: 0%;
 }
 
-/* ── 电池深度数据格 ── */
+/* 电池深度数据格 */
 .batt-grid {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 1px; background: color-mix(in srgb, var(--clr-outline-variant) 40%, transparent);
@@ -1060,9 +1060,9 @@ body.charging .card:not(.card-no-chg) > * {
 .batt-cell.charging-hi { background: color-mix(in srgb, var(--clr-primary-container) 60%, var(--clr-surface-container)); }
 .batt-cell.charging-hi .batt-cell-val { color: var(--clr-primary); }
 
-/* ─────────────────────────────────────────
-   模块信息区（关于页顶部）
-───────────────────────────────────────── */
+/*
+模块信息区（关于页顶部）
+*/
 .about-mod-hero {
   display: flex;
   align-items: center;
@@ -1091,9 +1091,9 @@ body.charging .card:not(.card-no-chg) > * {
   margin-top: 3px;
 }
 
-/* ─────────────────────────────────────────
-   作者卡片
-───────────────────────────────────────── */
+/*
+作者卡片
+*/
 .author-card {
   display: flex;
   align-items: center;
@@ -1150,7 +1150,7 @@ body.charging .card:not(.card-no-chg) > * {
   flex-shrink: 0;
 }
 
-/* ── 捐赠行 ── */
+/* 捐赠行 */
 .donate-row {
   display: flex;
   align-items: center;
@@ -1167,7 +1167,7 @@ body.charging .card:not(.card-no-chg) > * {
 .donate-row:active { background: color-mix(in srgb, currentColor 8%, transparent); }
 .donate-row span { flex: 1; }
 
-/* ── 伪插拔展开动画 ── */
+/* 伪插拔展开动画 */
 .plug-detail-wrap {
   max-height: 0;
   overflow: hidden;
@@ -1181,9 +1181,9 @@ body.charging .card:not(.card-no-chg) > * {
   margin-top: 12px !important;
 }
 
-/* ─────────────────────────────────────────
-   Charging Page — M3 化控件
-───────────────────────────────────────── */
+/*
+Charging Page — M3 化控件
+*/
 /* Top bar with right action */
 .top-bar-row {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -1298,9 +1298,9 @@ body.charging .card:not(.card-no-chg) > * {
 /* Column layout chg-item (plug card) */
 .chg-item-column { flex-direction: column; align-items: stretch; }
 
-/* ─────────────────────────────────────────
-   公共页 — disguise 伪装卡片
-───────────────────────────────────────── */
+/*
+公共页 — disguise 伪装卡片
+*/
 /* 伪装卡片内 slider 区域（折叠） */
 .disguise-body {
   max-height: 0;
@@ -1402,7 +1402,7 @@ body.charging .card:not(.card-no-chg) > * {
   background: var(--clr-primary);
 }
 
-/* ─── 关于页底栏 ─── */
+/* 关于页底栏 */
 .about-footer {
   text-align: left;
   font-size: 12px;

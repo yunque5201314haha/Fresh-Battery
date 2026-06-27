@@ -39,10 +39,8 @@
 </head>
 <body style="opacity:0;transition:opacity .25s ease">
 <div id="app">
-  <!-- ──────── Main content ──────── -->
   <div id="main">
 
-    <!-- 状态页 -->
     <div class="page active" id="page-status">
       <div class="top-bar">
         <div class="top-bar-title">状态</div>
@@ -50,7 +48,6 @@
       </div>
       <div class="page-body">
 
-        <!-- 温度双格 -->
         <div class="stat-row">
           <div class="tile-pri">
             <div class="tile-label">伪装写入</div>
@@ -72,7 +69,6 @@
           </div>
         </div>
 
-        <!-- 电量进度环卡片 -->
         <div class="card soc-ring-card">
           <div class="soc-ring-wrap">
             <svg class="soc-ring-svg" viewBox="0 0 120 120">
@@ -101,7 +97,6 @@
           </div>
         </div>
 
-        <!-- 电池深度数据 -->
         <div class="card">
           <div class="batt-grid">
             <div class="batt-cell" id="cell-volt">
@@ -123,7 +118,6 @@
           </div>
         </div>
 
-        <!-- 进程状态 -->
         <div class="pid-card">
           <div class="pid-dot" id="proc-dot"></div>
           <div class="pid-info">
@@ -137,7 +131,6 @@
           </div>
         </div>
 
-        <!-- 设备 -->
         <div class="card">
           <div class="card-head">设备</div>
           <div class="info-list">
@@ -162,7 +155,6 @@
       </div>
     </div>
 
-    <!-- 自定义页 — 充电控制 + 伪装功能 -->
     <div class="page" id="page-config">
       <div class="top-bar top-bar-row">
         <div class="top-bar-title">开启你的自定义</div>
@@ -173,7 +165,6 @@
       </div>
       <div class="page-body">
 
-        <!-- 充电开启 — 充电时启用已开启的伪装功能 -->
         <div class="card card-no-chg">
           <div class="chg-item">
             <div class="master-leading" id="chg-gate-icon">
@@ -192,10 +183,8 @@
         </div>
 
 
-        <!-- ─── 伪装功能 ─── -->
         <div class="section-label">伪装功能</div>
 
-        <!-- 电量伪装 -->
         <div class="card card-no-chg disguise-card">
           <div class="chg-item">
             <div class="master-leading" id="cap-spoof-icon">
@@ -219,7 +208,6 @@
           </div>
         </div>
 
-        <!-- 电池温度伪装 -->
         <div class="card card-no-chg disguise-card">
           <div class="chg-item">
             <div class="master-leading" id="temp-spoof-icon">
@@ -243,7 +231,6 @@
           </div>
         </div>
 
-        <!-- 充电循环次数伪装 -->
         <div class="card card-no-chg disguise-card">
           <div class="chg-item">
             <div class="master-leading" id="cc-spoof-icon">
@@ -267,7 +254,6 @@
           </div>
         </div>
 
-        <!-- 充放状态伪装 -->
         <div class="card card-no-chg">
           <div class="chg-item">
             <div class="master-leading" id="status-spoof-icon">
@@ -281,7 +267,6 @@
           </div>
         </div>
 
-        <!-- 解除亮屏充电限制 -->
         <div class="card card-no-chg">
           <div class="chg-item">
             <div class="master-leading" id="chg-unlock-icon">
@@ -303,14 +288,12 @@
       </div>
     </div>
 
-    <!-- 关于页 -->
     <div class="page" id="page-about">
       <div class="top-bar">
         <div class="top-bar-title">关于</div>
       </div>
       <div class="page-body">
 
-        <!-- 模块信息卡 -->
         <div class="card">
           <div class="about-mod-hero">
             <div class="about-mod-icon">
@@ -323,7 +306,6 @@
           </div>
         </div>
 
-        <!-- 链接卡 -->
         <div class="card">
           <div class="about-link-grid">
             <button class="link-btn" onclick="openUrl('https://1817712916.share.123pan.cn/123pan/pk6Tjv-IPUuv')">
@@ -337,7 +319,6 @@
           </div>
         </div>
 
-        <!-- 作者卡 -->
         <div class="section-label">作者</div>
         <div class="card card-no-chg">
           <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/38698278')">
@@ -350,7 +331,6 @@
           </div>
           </div>
 
-        <!-- 代码节点/支持者 -->
         <div class="section-label">代码节点 / 支持者</div>
         <div class="card card-no-chg">
           <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/4262905')">
@@ -384,7 +364,6 @@
       </div>
     </div>
 
-    <!-- 充电控制子页（配置页左滑进入） -->
     <div class="page" id="page-charging">
       <div class="top-bar top-bar-row">
         <div class="top-bar-title">充电控制</div>
@@ -395,10 +374,8 @@
       </div>
       <div class="page-body">
 
-        <!-- ─── MI 专区 ─── -->
         <div id="chg-panel-mi" style="display:none">
 
-          <!-- 板块一：充电绕过 -->
           <div class="section-label">充电绕过</div>
           <div class="card card-no-chg">
             <div class="chg-item">
@@ -413,7 +390,6 @@
             </div>
           </div>
 
-          <!-- 板块二：快充保障 -->
           <div class="section-label">快充保障</div>
           <div class="card card-no-chg">
             <div class="chg-item chg-item-compact">
@@ -444,10 +420,8 @@
           </div>
         </div>
 
-        <!-- ─── OPPO/一加/真我专区 ─── -->
         <div id="chg-panel-oplus" style="display:none">
 
-          <!-- ─── 温度墙 ─── -->
           <div class="section-label">温度墙</div>
           <div class="card">
             <div class="gauge-area">
@@ -474,7 +448,6 @@
             </div>
           </div>
 
-          <!-- ─── CPU 频率解锁 ─── -->
           <div class="section-label">CPU 频率解锁</div>
           <div class="card card-no-chg">
             <div class="chg-item">
@@ -489,7 +462,6 @@
             </div>
           </div>
 
-          <!-- ─── 充电绕过 ─── -->
           <div class="section-label">充电绕过</div>
           <div class="card card-no-chg">
             <div class="chg-item">
@@ -515,7 +487,6 @@
             </div>
           </div>
 
-          <!-- ─── 快充保障 ─── -->
           <div class="section-label">快充保障</div>
           <div class="card card-no-chg">
             <div class="chg-item chg-item-column">
@@ -550,7 +521,6 @@
             </div>
           </div>
 
-          <!-- 组件控制 -->
           <div class="card card-no-chg">
             <div class="chg-item">
               <div class="master-leading" id="comp-icon">
@@ -586,7 +556,7 @@
           </div>
         </div>
 
-        <!-- ─── 未识别设备 ─── -->
+        <!--  未识别设备  -->
         <div id="chg-panel-unknown" style="display:none">
           <div class="card">
             <div class="unknown-msg" id="chg-unknown-msg">正在识别设备品牌…</div>
@@ -596,9 +566,8 @@
       </div>
     </div>
 
-  </div><!-- #main -->
+  </div>
 
-  <!-- ──────── 悬浮胶囊导航栏 ──────── -->
   <nav class="tabbar" id="tabbar">
     <button class="tab active" id="tab-status" data-page="status">
       <div class="tab-icon">
@@ -622,7 +591,7 @@
     </button>
   </nav>
 
-</div><!-- #app -->
+</div>
 
 <script src="js/ui.js" defer></script>
 <script src="js/exec.js" defer></script>

@@ -1,4 +1,3 @@
-/* ─── UI helpers ─── */
 function toggleSub(row) { row.classList.toggle('expanded'); }
 
 function applyMasterUI(on) {
@@ -25,7 +24,7 @@ function openUrl(url) {
   try { window.open(url, '_blank'); } catch(_) {}
 }
 
-/* ─── Navigation — 悬浮胶囊药丸跟随 ─── */
+/* 顶部导航胶囊动画 */
 function animateCards(page) {
   const els = page.querySelectorAll('.card,.card-filled,.tile-pri,.tile-sec,.pid-card,.section-label');
   els.forEach((el, i) => {
@@ -100,10 +99,9 @@ function animateCards(page) {
   });
 })();
 
-/* Initial card animation */
 requestAnimationFrame(() => animateCards(document.getElementById('page-status')));
 
-/* ─── Top App Bar scroll elevation ─── */
+/* 滚动时顶部栏阴影 */
 (function initTopBarElevation() {
   const pages = document.querySelectorAll('.page');
   pages.forEach(page => {
@@ -111,11 +109,10 @@ requestAnimationFrame(() => animateCards(document.getElementById('page-status'))
       const topBar = page.querySelector('.top-bar');
       if (!topBar) return;
       topBar.classList.toggle('top-bar-scrolled', page.scrollTop > 4);
-    });
+    }, { passive: true });
   });
 })();
 
-/* ─── Clock ─── */
 function tick() {
   const n = new Date(), p = x => String(x).padStart(2,'0');
   const el = document.getElementById('i-time');
@@ -123,7 +120,6 @@ function tick() {
 }
 tick(); setInterval(tick, 1000);
 
-/* ─── Constants ─── */
 const MODDIR  = '/data/adb/modules/Fresh-Battery';
 const CFG     = MODDIR + '/config';
 const PIDFILE = MODDIR + '/pids';

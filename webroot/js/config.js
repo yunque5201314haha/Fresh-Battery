@@ -1,4 +1,3 @@
-/* ─── Config I/O — extend global cfg with disguise defaults ─── */
 Object.assign(cfg, {
   chg_gate:0, cap_spoof:0, cap_spoof_val:80, cap_spoof_chg:0, temp_spoof:0, temp_spoof_val:34, temp_spoof_chg:0,
   cc_spoof_val:10, cc_spoof_chg:0, status_spoof:0, status_spoof_chg:0, chg_unlock:0, chg_unlock_chg:0,
@@ -34,7 +33,6 @@ async function loadConfig() {
   cfg.oplus_comp  = vb(13);
   cfg.comp_wifi   = vb(14);
   cfg.comp_audio  = vb(15);
-  /* 公共页伪装功能 */
   cfg.chg_gate      = vb(16);
   cfg.cap_spoof     = vb(17);
   const csv = vi(18); if (csv>=0&&csv<=100) cfg.cap_spoof_val = csv;
@@ -73,7 +71,6 @@ async function loadConfig() {
   syncPlugUI();
   applyMasterUI(!!cfg.svc);
   updateWallChip(cfg.target_temp);
-  /* 公共页 UI 同步 */
   syncPublicUI();
 }
 
@@ -211,15 +208,12 @@ async function applyNow() {
   }
 }
 
-/* ─── 公共页 UI 同步 — 各伪装功能独立控制 ─── */
 function syncPublicUI() {
-  /* 充电开启 */
   const chgGateSw = document.getElementById('sw-chg-gate');
   if (chgGateSw) chgGateSw.checked = !!cfg.chg_gate;
   updateSpoofIcon('chg-gate-icon', cfg.chg_gate);
   syncChgGateList();
 
-  /* 各伪装功能的开关和滑块同步 */
   const syncSw = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
   syncSw('sw-cap-spoof', cfg.cap_spoof);
   syncSw('sw-temp-spoof', cfg.temp_spoof);
@@ -227,7 +221,6 @@ function syncPublicUI() {
   syncSw('sw-status-spoof', cfg.status_spoof);
   syncSw('sw-chg-unlock', cfg.chg_unlock);
 
-  /* 滑块 */
   const capSl = document.getElementById('cap-spoof-slider');
   if (capSl) { capSl.value = cfg.cap_spoof_val; syncSlider(capSl); }
   const tempSl = document.getElementById('temp-spoof-slider');
@@ -235,7 +228,6 @@ function syncPublicUI() {
   const ccSl = document.getElementById('cc-spoof-slider');
   if (ccSl) { ccSl.value = cfg.cc_spoof_val; syncSlider(ccSl); }
 
-  /* 值显示 */
   const capVal = document.getElementById('cap-spoof-val');
   if (capVal) capVal.textContent = cfg.cap_spoof_val + '%';
   const tempVal = document.getElementById('temp-spoof-val');
@@ -243,12 +235,10 @@ function syncPublicUI() {
   const ccVal = document.getElementById('cc-spoof-val');
   if (ccVal) ccVal.textContent = cfg.cc_spoof_val;
 
-  /* 各伪装功能的展开/折叠 */
   toggleDisguiseBody('cap-spoof-body', cfg.cap_spoof);
   toggleDisguiseBody('temp-spoof-body', cfg.temp_spoof);
   toggleDisguiseBody('cc-spoof-body', cfg.cc);
 
-  /* icon 颜色 */
   updateSpoofIcon('cap-spoof-icon', cfg.cap_spoof);
   updateSpoofIcon('temp-spoof-icon', cfg.temp_spoof);
   updateSpoofIcon('cc-spoof-icon', cfg.cc);
@@ -270,14 +260,12 @@ function updateSpoofIcon(id, on) {
     : 'color-mix(in srgb,var(--clr-secondary-container) 60%,transparent)';
 }
 
-/* ─── 充电开启 toggle — 展开列表只显示已开启的功能 ─── */
 function onChgGateToggle() {
   cfg.chg_gate = document.getElementById('sw-chg-gate').checked ? 1 : 0;
   updateSpoofIcon('chg-gate-icon', cfg.chg_gate);
   syncChgGateList();
 }
 
-/* 充电开启展开列表 — 只显示已开启的功能，每项可选"充电专属" */
 function syncChgGateList() {
   const body = document.getElementById('chg-gate-body');
   const list = document.getElementById('chg-gate-list');
@@ -298,7 +286,6 @@ function syncChgGateList() {
   if (cfg.cc)           items.push({ id:'sw-cc-spoof-chg', name:'充电循环次数伪装', detail: '' + cfg.cc_spoof_val, chg: cfg.cc_spoof_chg });
   if (cfg.status_spoof) items.push({ id:'sw-status-spoof-chg', name:'充放状态伪装', detail:'伪装为未充电', chg: cfg.status_spoof_chg });
   if (cfg.chg_unlock)   items.push({ id:'sw-chg-unlock-chg', name:'解除亮屏充电限制', detail:'', chg: cfg.chg_unlock_chg });
-  /* 充电页功能 */
   if (cfg.bypass)       items.push({ id:'sw-bypass-chg', name:'MI伪旁路充电', detail:'限流500mA', chg: cfg.bypass_chg });
   if (cfg.currlimit)    items.push({ id:'sw-currlimit-chg', name:'电流限制', detail: cfg.currma + 'mA', chg: cfg.currlimit_chg });
   if (cfg.mmi_bypass)   items.push({ id:'sw-mmi-chg', name:'O伪旁路充电', detail:'', chg: cfg.mmi_chg });
@@ -321,7 +308,6 @@ function syncChgGateList() {
     : '<div class="chg-gate-empty">尚未开启任何功能</div>';
 }
 
-/* 充电专属标记 toggle */
 function onChgSpoofChg(el) {
   const map = {
     'sw-cap-spoof-chg':'cap_spoof_chg', 'sw-temp-spoof-chg':'temp_spoof_chg',
@@ -335,7 +321,6 @@ function onChgSpoofChg(el) {
   if (key) cfg[key] = el.checked ? 1 : 0;
 }
 
-/* ─── 公共页 toggle 处理函数 ─── */
 function onCapSpoofToggle() {
   cfg.cap_spoof = document.getElementById('sw-cap-spoof').checked ? 1 : 0;
   toggleDisguiseBody('cap-spoof-body', cfg.cap_spoof);
@@ -393,7 +378,6 @@ function onChgUnlockToggle() {
   syncChgGateList();
 }
 
-/* ─── SOC ring color ─── */
 function socColor(pct) {
   if (pct >= 60) return '#4CAF50';
   if (pct >= 30) return '#FF9800';
@@ -409,7 +393,6 @@ function updateSocRing(pct) {
   if (fill) { fill.style.width = Math.min(pct,100) + '%'; fill.style.background = col; }
 }
 
-/* ─── Batt sparkline history ─── */
 const battHistory = [];
 function pushBatt(v) {
   if (typeof v === 'number' && v > 0) { battHistory.push(v); if (battHistory.length > 30) battHistory.shift(); }
@@ -439,7 +422,6 @@ function drawBattSparkline() {
   ctx.strokeStyle = pr; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke();
 }
 
-/* ─── 解析 uevent ─── */
 function parseUevent(raw) {
   const m = {};
   raw.split('\n').forEach(l => {

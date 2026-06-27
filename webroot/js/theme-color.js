@@ -1,12 +1,12 @@
-/* ─── Monet 动态取色 (Material You)
+/*  Monet 动态取色 (Material You)
  *   从系统提取壁纸 accent color，生成 M3 完整色板，
  *   注入为 CSS 自定义属性 --clr-*。
  *   在所有管理器（KSU / Magisk / APatch）下生效。
  *   若取色失败，使用默认紫色回退。
- * ─────────────────────────────────────────── */
+ *  */
 import { hexFromArgb, Hct, TonalPalette } from 'https://esm.run/@material/material-color-utilities@2';
 
-/* ── 将 shell 输出中的颜色值解析为 ARGB int ── */
+/*  将 shell 输出中的颜色值解析为 ARGB int  */
 function parseColorInt(raw) {
   if (!raw) return null;
   let s = raw.trim();
@@ -24,7 +24,7 @@ function parseColorInt(raw) {
   return null;
 }
 
-/* ── 通过 root shell 尝试获取系统壁纸的 accent seed ── */
+/*  通过 root shell 尝试获取系统壁纸的 accent seed  */
 async function extractSeed() {
   const cmds = [
     /* 1) dumpsys wallpaper — 优先 mPrimaryColor */
@@ -50,7 +50,7 @@ async function extractSeed() {
   return null;
 }
 
-/* ── 从 seed ARGB 生成完整 M3 色板（深浅两套 tone） ── */
+/*  从 seed ARGB 生成完整 M3 色板（深浅两套 tone）  */
 function generatePalette(seed, isDark) {
   const hct = Hct.fromInt(seed);
   const hue = hct.hue;
@@ -121,7 +121,7 @@ function generatePalette(seed, isDark) {
   return out;
 }
 
-/* ── 将色板写入 --clr-* CSS 变量 ── */
+/* 将色板写入 --clr-* CSS 变量 */
 function applyPalette(colors) {
   const root = document.documentElement;
   for (const [key, hex] of Object.entries(colors)) {
@@ -129,7 +129,7 @@ function applyPalette(colors) {
   }
 }
 
-/* ── 获取当前有效深浅模式 ── */
+/* 获取当前有效深浅模式 */
 function effectiveDark() {
   const root = document.documentElement;
   if (root.classList.contains('theme-dark'))  return true;
@@ -137,12 +137,10 @@ function effectiveDark() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-/* ── 持久化主题偏好 ── */
+/* 保存主题偏好 */
 function savePref(mode) {
   try { localStorage.setItem('fb-theme', mode); } catch (_) {}
 }
-
-/* ── 公开 API ── */
 
 /* 重新生成并注入色板（在深浅切换时调用） */
 export function rebuild() {
