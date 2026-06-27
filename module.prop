@@ -3,6 +3,6 @@ name=FreshBattery
 version=v1.0
 versionCode=10
 author=石板上回荡的
-description=让您的电池更加适合
+description=开启你的自定义,也许是伪装过温度墙，或许是解除亮屏充电限制功率，可以是伪装绕系统限制...
 webui=true
 updateJson=https://raw.githubusercontent.com/yunque5201314haha/Fresh-Battery/main/update.json
