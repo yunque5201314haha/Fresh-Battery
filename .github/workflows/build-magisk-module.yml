@@ -45,8 +45,8 @@ jobs:
             "时间: ${BUILD_TIME}" \
             "" > tg_caption.txt
           cat >> tg_caption.txt << 'CMTEOF'
-${{ github.event.head_commit.message }}
-CMTEOF
+          ${{ github.event.head_commit.message }}
+          CMTEOF
           printf '\n提交者: %s\n' "${{ github.actor }}" >> tg_caption.txt
 
       - name: Upload Artifact
