@@ -35,13 +35,13 @@ jobs:
 
       - name: Prepare Telegram message
         run: |
-          cat > tg_caption.txt << EOF
-          FreshBattery 更新 v${{ env.MODULE_VER }} (#${{ env.BUILD_NUM }})
-
-          ${{ github.event.head_commit.message }}
-
-          提交者: ${{ github.actor }}
-          EOF
+          {
+            echo "FreshBattery 更新 v${MODULE_VER} (#${BUILD_NUM})"
+            echo ""
+            echo "${{ github.event.head_commit.message }}"
+            echo ""
+            echo "提交者: ${{ github.actor }}"
+          } > tg_caption.txt
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -54,10 +54,16 @@ jobs:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" \
+          if [ ! -f "${ZIP_NAME}" ]; then
+            echo "错误: 文件 ${ZIP_NAME} 不存在"
+            exit 1
+          fi
+          echo "发送文件: ${ZIP_NAME}"
+          curl -sS --fail -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" \
             -F chat_id="${CHAT_ID}" \
-            -F document="@${{ env.ZIP_NAME }}" \
-            -F caption=@tg_caption.txt
+            -F document="@${ZIP_NAME}" \
+            -F caption=@tg_caption.txt \
+            -o /dev/null -w "Telegram API 响应: %{http_code}\n"
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
