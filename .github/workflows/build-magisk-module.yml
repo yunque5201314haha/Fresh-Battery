@@ -31,7 +31,7 @@ jobs:
           echo "BUILD_NUM=${BUILD_NUM}" >> $GITHUB_ENV
           mkdir -p _module
           cp -r META-INF webroot customize.sh module.prop service.sh uninstall.sh MAIN _module/
-          cd _module && zip -r9 "../${ZIP_NAME}" . && cd ..
+          cd _module && zip -r0 "../${ZIP_NAME}" . && cd ..
 
       - name: Prepare Telegram message
         run: |
@@ -47,7 +47,7 @@ jobs:
           cat >> tg_caption.txt << 'CMTEOF'
           ${{ github.event.head_commit.message }}
           CMTEOF
-          printf '\n提交者: %s\n' "${{ github.actor }}" >> tg_caption.txt
+          printf '\n' >> tg_caption.txt
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
