@@ -35,14 +35,14 @@ jobs:
 
       - name: Prepare Telegram message
         run: |
-          FILE_SIZE=$(du -h "${ZIP_NAME}" | cut -f1)
           SHORT_SHA="${{ github.sha }}" && SHORT_SHA="${SHORT_SHA:0:7}"
+          BUILD_TIME=$(date -u +%m%d%H%M -d "+8 hours")
           {
             echo "FreshBattery v${MODULE_VER} 构建 #${BUILD_NUM}"
             echo "─────────────────────────"
             echo "文件: ${ZIP_NAME}"
-            echo "大小: ${FILE_SIZE}"
             echo "提交: ${SHORT_SHA}"
+            echo "时间: ${BUILD_TIME}"
             echo ""
             echo "${{ github.event.head_commit.message }}"
             echo ""
