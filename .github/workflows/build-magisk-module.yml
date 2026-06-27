@@ -11,17 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup NDK
-        id: setup-ndk
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r27
+      - name: Install gcc
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc
 
       - name: Compile MAIN binary
-        run: |
-          TOOLCHAIN=${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64
-          $TOOLCHAIN/bin/aarch64-linux-android24-clang \
-            -O2 -static -o MAIN main.c
+        run: gcc -O2 -o MAIN main.c -lpthread
 
       - name: Package Magisk Module
         run: |
