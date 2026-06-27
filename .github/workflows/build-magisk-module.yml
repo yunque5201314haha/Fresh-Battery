@@ -68,11 +68,11 @@ jobs:
           echo "--- caption 内容 ---"
           cat tg_caption.txt
           echo "--- 结束 ---"
-          curl -sS --fail -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" \
+          CAPTION_TEXT=$(cat tg_caption.txt | head -c 1024)
+          curl -sS -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" \
             -F chat_id="${CHAT_ID}" \
             -F "document=@${ZIP_NAME}" \
-            -F "caption=@tg_caption.txt" \
-            -o /dev/null -w "Telegram API 响应: %{http_code}\n"
+            -F "caption=${CAPTION_TEXT}"
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
