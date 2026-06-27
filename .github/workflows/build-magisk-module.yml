@@ -13,7 +13,7 @@ jobs:
 
       - name: Setup NDK
         id: setup-ndk
-        uses: ncipollo/setup-ndk@v1
+        uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27
 
