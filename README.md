@@ -120,9 +120,9 @@ O伪旁路充电=0
 
 ## 鸣谢
 
-- **阮mumu** — [CoolAPK](https://www.coolapk.com/u/4262905)
-- **她说好了** — [CoolAPK](https://www.coolapk.com/u/9510475)
-- **bybycode** — [CoolAPK](https://www.coolapk.com/u/716079)
+- **阮mumu** — CoolAPK
+- **她说好了** — CoolAPK
+- **bybycode** — CoolAPK
 - **Metahybird** — 底栏作业参考
 - **KernelSU** — WebUI / MUI 颜色系统
 
