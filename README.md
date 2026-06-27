@@ -80,7 +80,7 @@
 
 ## 安装方法
 
-1. 从 [更新网盘](https://www.123912.com/s/pk6Tjv-uTm0v) 下载最新模块包
+1. 从 [更新网盘](https://1817712916.share.123pan.cn/123pan/pk6Tjv-IPUuv) 下载最新模块包
 2. 在 Magisk / KernelSU / APatch 管理器中刷入模块
 3. 重启设备
 4. 在 KernelSU Manager 中进入模块详情，点击「启动 WebUI」
