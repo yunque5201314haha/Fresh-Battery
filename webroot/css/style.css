@@ -99,8 +99,8 @@ M3 Color Tokens
   --md-sys-color-scrim:                   #000000;
 
   /* 字体 — 让 @material/web 用现有 Noto Sans SC，而不是默认 Roboto */
-  --md-ref-typeface-brand: 'Noto Sans SC', system-ui, sans-serif;
-  --md-ref-typeface-plain: 'Noto Sans SC', system-ui, sans-serif;
+  --md-ref-typeface-brand: var(--font);
+  --md-ref-typeface-plain: var(--font);
 
   /* M3 Shape scale — M3 Expressive 扩展（10级粒度，新增 increased 档位） */
   --shape-none:   0px;
@@ -126,7 +126,8 @@ M3 Color Tokens
   --motion-spring:        cubic-bezier(.34,1.3,.64,1);  /* 标准回弹 */
   --motion-spring-bouncy: cubic-bezier(.34,1.6,.64,1);  /* 强回弹，弹窗/形状变形 */
 
-  --font: system-ui, -apple-system, sans-serif;
+  --font: 'Noto Sans SC', 'HarmonyOS Sans SC', 'MI Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, 'SF Mono', Menlo, monospace;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
@@ -352,18 +353,6 @@ M3 Top App Bar — Medium variant
   color: var(--clr-on-surface);
   padding: 12px 0 4px;
 }
-.temp-wall-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  margin-left: 8px; margin-bottom: 3px;
-  padding: 2px 9px 2px 7px;
-  background: var(--clr-primary-container);
-  color: var(--clr-on-primary-container);
-  border-radius: var(--shape-full);
-  font: 500 12px/1.6 var(--font);
-  vertical-align: middle;
-  white-space: nowrap;
-}
-.temp-wall-chip svg { flex-shrink: 0; }
 .top-bar-greeting {
   font-size: 13px;
   color: var(--clr-on-surface-variant);
@@ -393,12 +382,6 @@ M3 Cards — 严格遵循 M3 规范
   box-shadow: var(--elev-1);
   transition: box-shadow .25s var(--motion-standard), background .3s ease;
 }
-.card-filled {
-  border-radius: var(--shape-xl-inc);
-  background: var(--clr-surface-container-highest);
-  overflow: hidden;
-}
-
 /* Card supporting text header */
 .card-head {
   padding: 20px 20px 0;
@@ -455,7 +438,7 @@ Status Page — stat tiles
 .tile-val sup { font-size: .38em; font-weight: 400; opacity: .55; vertical-align: super; letter-spacing: 0; }
 
 .tile-path {
-  font: 400 10px/1.4 'JetBrains Mono', monospace;
+  font: 400 10px/1.4 var(--font-mono);
   color: var(--clr-on-primary-container); opacity: .45; margin-top: 4px;
 }
 
@@ -503,8 +486,8 @@ canvas.sparkline { width: 100%; height: 32px; display: block; }
   50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--clr-primary) 28%, transparent); }
 }
 .pid-info { flex: 1; min-width: 0; }
-.pid-name { font: 500 13px/1.2 'JetBrains Mono', monospace; color: var(--clr-on-surface); letter-spacing: .5px; }
-.pid-id   { font: 400 11px/1.4 'JetBrains Mono', monospace; color: var(--clr-on-surface-variant); margin-top: 2px; }
+.pid-name { font: 500 13px/1.2 var(--font-mono); color: var(--clr-on-surface); letter-spacing: .5px; }
+.pid-id   { font: 400 11px/1.4 var(--font-mono); color: var(--clr-on-surface-variant); margin-top: 2px; }
 .pid-badge {
   font: 500 11px/1 var(--font); letter-spacing: .3px;
   padding: 5px 12px; border-radius: var(--shape-full);
@@ -548,7 +531,7 @@ canvas.sparkline { width: 100%; height: 32px; display: block; }
 }
 .info-label { font-size: 14px; color: var(--clr-on-surface); flex: 1; }
 .info-value {
-  font: 400 13px/1 'JetBrains Mono', monospace;
+  font: 400 13px/1 var(--font-mono);
   color: var(--clr-on-surface-variant);
 }
 
@@ -652,7 +635,7 @@ Config Page
 .gauge-labels {
   display: flex; justify-content: space-between; width: 100%;
   max-width: 160px;
-  font: 400 11px/1 'JetBrains Mono', monospace;
+  font: 400 11px/1 var(--font-mono);
   color: var(--clr-on-surface-variant); opacity: .6;
 }
 .slider-wrap { padding: 0 20px 4px; position: relative; z-index: 2; }
@@ -728,21 +711,6 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 .seg-btn:active::before { opacity: .08; }
 .seg-btn.active:active::before { opacity: .12; }
 
-/* Master switch list item */
-.master-item {
-  display: flex; align-items: center; gap: 16px;
-  padding: 16px 20px; cursor: pointer;
-  position: relative; overflow: hidden;
-  transition: background .22s;
-}
-.master-item::after {
-  content: ''; position: absolute; inset: 0;
-  background: var(--clr-on-surface); opacity: 0;
-  transition: opacity .15s; pointer-events: none;
-}
-.master-item:active::after { opacity: .06; }
-.master-item.on { background: color-mix(in srgb, var(--clr-primary) 8%, transparent); }
-
 .master-leading {
   width: 40px; height: 40px; border-radius: var(--shape-l);
   background: var(--clr-primary); color: var(--clr-on-primary);
@@ -753,18 +721,6 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   width: 20px; height: 20px;
   fill: currentColor;
 }
-.master-item.off .master-leading {
-  background: var(--clr-surface-container-highest);
-  color: var(--clr-on-surface-variant); opacity: .65;
-}
-.master-text { flex: 1; min-width: 0; }
-.master-title { font-size: 16px; font-weight: 500; color: var(--clr-on-surface); letter-spacing: .1px; }
-.master-subtitle {
-  font-size: 12px; color: var(--clr-on-surface-variant);
-  margin-top: 2px; transition: color .2s;
-}
-.master-item.on .master-subtitle { color: var(--clr-primary); }
-
 /* 自定义 Toggle Switch — 严格 M3 规范，带 ✓/✕ 图标 */
 .toggle-switch {
   position: relative;
@@ -827,36 +783,6 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 }
 /* md-switch 回退 — 隐藏未定义的 Web Component */
 md-switch:not(:defined) { display: none; }
-
-/* Collapsible body */
-#sw-body { overflow: hidden; max-height: 600px; opacity: 1; transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .3s; }
-#sw-body.collapsed { max-height: 0; opacity: 0; }
-
-/* Switch list items */
-.sw-item {
-  display: flex; align-items: center; justify-content: space-between;
-  min-height: 56px; padding: 10px 20px;
-  position: relative; cursor: pointer; overflow: hidden;
-}
-.sw-item + .sw-item::before {
-  content: ''; position: absolute; top: 0; left: 20px; right: 20px;
-  height: 1px; background: var(--clr-outline-variant); opacity: .4;
-}
-.sw-item::after {
-  content: ''; position: absolute; inset: 0;
-  background: var(--clr-on-surface); opacity: 0; transition: opacity .15s; pointer-events: none;
-}
-.sw-item:active::after { opacity: .06; }
-.sw-texts { flex: 1; min-width: 0; }
-.sw-title { font-size: 16px; font-weight: 500; color: var(--clr-on-surface); letter-spacing: .1px; }
-.sw-sub {
-  font: 400 11px/1.4 'JetBrains Mono', monospace;
-  color: var(--clr-on-surface-variant);
-  max-height: 0; opacity: 0; overflow: hidden;
-  transition: max-height .2s, opacity .2s; margin-top: 2px;
-}
-.sw-item.expanded .sw-sub { max-height: 18px; opacity: .6; }
-.sw-trail { margin-left: 16px; flex-shrink: 0; }
 
 /*
 About Page
@@ -957,26 +883,6 @@ body.charging .card:not(.card-no-chg) > * {
   z-index: 2;
 }
 
-.votable-row {
-  display: flex; align-items: center;
-  min-height: 52px; padding: 8px 20px;
-  position: relative;
-}
-.votable-row + .votable-row::before {
-  content: ''; position: absolute; top: 0; left: 20px; right: 20px;
-  height: 1px; background: var(--clr-outline-variant); opacity: .4;
-}
-.votable-key {
-  font: 400 12px/1.4 'JetBrains Mono', monospace;
-  color: var(--clr-on-surface-variant);
-  flex: 1; min-width: 0;
-}
-.votable-val {
-  font: 500 13px/1 'JetBrains Mono', monospace;
-  color: var(--clr-on-surface);
-  margin-left: 8px;
-}
-
 /* 电池实测 tile 补充 */
 .tile-sec-temp { gap: 6px; }
 .batt-sparkline-wrap { flex: 1; min-height: 28px; }
@@ -1016,8 +922,8 @@ body.charging .card:not(.card-no-chg) > * {
   display: flex; justify-content: space-between; align-items: center;
   font-size: 12px;
 }
-.soc-detail-label { color: var(--clr-on-surface-variant); font-family: 'JetBrains Mono', monospace; }
-.soc-detail-val   { font-weight: 500; color: var(--clr-on-surface); font-family: 'JetBrains Mono', monospace; }
+.soc-detail-label { color: var(--clr-on-surface-variant); font-family: var(--font-mono); }
+.soc-detail-val   { font-weight: 500; color: var(--clr-on-surface); font-family: var(--font-mono); }
 .soc-progress-track {
   height: 6px; border-radius: var(--shape-full);
   background: var(--clr-surface-container-highest);
@@ -1086,7 +992,7 @@ body.charging .card:not(.card-no-chg) > * {
   letter-spacing: -.3px;
 }
 .about-mod-ver {
-  font: 400 13px/1.4 'JetBrains Mono', monospace;
+  font: 400 13px/1.4 var(--font-mono);
   color: var(--clr-on-surface-variant);
   margin-top: 3px;
 }
@@ -1149,23 +1055,6 @@ body.charging .card:not(.card-no-chg) > * {
   opacity: .45;
   flex-shrink: 0;
 }
-
-/* 捐赠行 */
-.donate-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  cursor: pointer;
-  border-top: 1px solid var(--clr-outline-variant);
-  color: var(--clr-on-surface);
-  font-size: 14px;
-  font-weight: 500;
-  position: relative;
-  -webkit-tap-highlight-color: transparent;
-}
-.donate-row:active { background: color-mix(in srgb, currentColor 8%, transparent); }
-.donate-row span { flex: 1; }
 
 /* 伪插拔展开动画 */
 .plug-detail-wrap {
@@ -1265,28 +1154,12 @@ Charging Page — M3 化控件
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
 }
 
-/* Donate overlay */
-#donate-overlay {
-  display: none; position: fixed; inset: 0; z-index: 999;
-  align-items: center; justify-content: center;
-  background: rgba(0,0,0,0); backdrop-filter: blur(0px);
-  transition: background .25s, backdrop-filter .25s;
-}
-#donate-img {
-  max-width: 80%; max-height: 80%; border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.4);
-  transform: scale(.85); opacity: 0;
-  transition: transform .28s cubic-bezier(.34,1.56,.64,1), opacity .22s;
-}
-
 /* Unknown device message */
 .unknown-msg {
   padding: 32px 20px; text-align: center;
   color: var(--clr-on-surface-variant); font-size: 14px;
 }
 
-/* Charging section spacing */
-.chg-section { margin-top: 4px; }
 /* Compact chg-item (has slider below) */
 .chg-item-compact { padding-bottom: 4px; }
 /* Divider between chg-items inside a single card */
@@ -1343,7 +1216,7 @@ Charging Page — M3 化控件
   gap: 6px;
 }
 .chg-gate-detail {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--clr-on-surface-variant);
   opacity: .7;

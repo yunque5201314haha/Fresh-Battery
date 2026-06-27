@@ -1,5 +1,4 @@
 let cfg = { target_temp:34, svc:0, cc:0, cpu:0, cap:0, bypass:0, currlimit:0, currma:22000, font:'noto', mmi_bypass:0, plug_interval:0, plug_level:80, plc_charge:0, oplus_comp:0, comp_wifi:0, comp_audio:0 };
-let _cachedPrimary = '';
 
 function themeRefreshStyleCache() {
   const cs = getComputedStyle(document.documentElement);

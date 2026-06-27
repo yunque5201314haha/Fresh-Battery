@@ -7,37 +7,40 @@ if [ -z "$MODPATH" ]; then
     esac
     MODPATH="${_self%/*}"
 fi
-mkdir -p "$MODPATH" || { echo "错误：无法创建 $MODPATH"; exit 1; }
+mkdir -p "$MODPATH" || { ui_print "错误：无法创建 $MODPATH"; exit 1; }
 
 CFG="$MODPATH/config"
 
-[ -f "$CFG" ] || printf '%s\n' \
-    "目标温度=34" \
-    "服务开关=0" \
-    "循环伪装=0" \
-    "CPU频率解锁=0" \
-    "电量挂载=0" \
-    "MI伪旁路充电=0" \
-    "电流限制=0" \
-    "最大电流=22000" \
-    "O伪旁路充电=0" \
-    "伪插拔间隔=0" \
-    "伪插拔电量=80" \
-    "伪Osys旁路充电=0" \
-    "组件控制=0" \
-    "充电开启=0" \
-    "电量伪装=0" \
-    "电量伪装值=80" \
-    "温度伪装=0" \
-    "温度伪装值=34" \
-    "循环伪装值=10" \
-    "充放状态伪装=0" \
-    "亮屏充电限制=0" > "$CFG"
+# 仅在配置文件不存在时写入默认值，保留用户配置
+if [ ! -f "$CFG" ]; then
+    printf '%s\n' \
+        "目标温度=34" \
+        "服务开关=0" \
+        "循环伪装=0" \
+        "CPU频率解锁=0" \
+        "电量挂载=0" \
+        "MI伪旁路充电=0" \
+        "电流限制=0" \
+        "最大电流=22000" \
+        "O伪旁路充电=0" \
+        "伪插拔间隔=0" \
+        "伪插拔电量=80" \
+        "伪Osys旁路充电=0" \
+        "组件控制=0" \
+        "充电开启=0" \
+        "电量伪装=0" \
+        "电量伪装值=80" \
+        "温度伪装=0" \
+        "温度伪装值=34" \
+        "循环伪装值=10" \
+        "充放状态伪装=0" \
+        "亮屏充电限制=0" > "$CFG"
+fi
 chmod 666 "$CFG"
 
-# 创建模块目录并标记更新（兼容 Magisk 和 APatch）
+# 创建模块目录并标记更新（兼容 Magisk/APatch/KernelSU）
 MDIR=/data/adb/modules/Fresh-Battery
-if [ -f /data/adb/magisk.db ] || [ -f /data/adb/apd ]; then
+if [ -f /data/adb/magisk.db ] || [ -f /data/adb/apd ] || [ -f /data/adb/ksu ]; then
     mkdir -p "$MDIR"
     cp "$MODPATH/module.prop" "$MDIR/module.prop"
     : > "$MDIR/update"

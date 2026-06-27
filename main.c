@@ -164,9 +164,8 @@ static Config parse_config(void) {
     struct stat st;
     if (fstat(fileno(f), &st) != 0 || st.st_size <= 0 || st.st_size > 4096) { fclose(f); return c; }
     long sz = st.st_size;
-    char *buf = malloc(sz + 1);
-    if (!buf) { fclose(f); return c; }
-    if (fread(buf, 1, sz, f) != (size_t)sz) { free(buf); fclose(f); return c; }
+    char buf[4097];  /* 栈上分配，避免 malloc 开销 */
+    if (fread(buf, 1, sz, f) != (size_t)sz) { fclose(f); return c; }
     fclose(f);
     buf[sz] = 0;
 
@@ -192,7 +191,6 @@ static Config parse_config(void) {
     v = cfg_get(buf, "循环伪装值");     if (v >= 0)               c.cc_spoof_val  = v;
     v = cfg_get(buf, "充放状态伪装");   if (v == 0 || v == 1)     c.status_spoof  = v;
     v = cfg_get(buf, "亮屏充电限制");   if (v == 0 || v == 1)     c.chg_unlock    = v;
-    free(buf);
     return c;
 }
 
@@ -272,12 +270,26 @@ static void write_temp(int celsius) {
     close(fd);
 }
 
-static int is_charging(void) {
-    char buf[32] = {0};
+/* 读取充电状态，返回状态字符串长度，0 表示失败 */
+static int read_chg_status(char *buf, int size) {
     int fd = open(CHG_STATUS, O_RDONLY | O_CLOEXEC);
-    if (fd >= 0) { read(fd, buf, 31); close(fd); }
+    if (fd < 0) { buf[0] = 0; return 0; }
+    int n = read(fd, buf, size - 1);
+    close(fd);
+    if (n <= 0) { buf[0] = 0; return 0; }
+    buf[n] = 0;
     buf[strcspn(buf, "\n")] = 0;
-    if (strcmp(buf, "Charging") != 0 && strcmp(buf, "Full") != 0) return 0;
+    return n;
+}
+
+static int is_charging_status(const char *status) {
+    return strcmp(status, "Charging") == 0 || strcmp(status, "Full") == 0;
+}
+
+static int is_charging(void) {
+    char buf[32];
+    read_chg_status(buf, sizeof(buf));
+    if (!is_charging_status(buf)) return 0;
     if (rd_int(USB_PRESENT) == 1) return 1;
     if (rd_int(USB_ONLINE)  == 1) return 1;
     if (rd_int(AC_ONLINE)   == 1) return 1;
@@ -307,23 +319,38 @@ static void cpu_limit_off(void) {
 }
 static void cpu_limit_on(void)  { wr_str(CPU_FREQ_LMT, "0\n"); }
 
-static void bypass_charge_on(void) {
+/* 通用电流节点写入 */
+static void apply_curr_nodes(int ua) {
     char ua_str[32];
-    snprintf(ua_str, sizeof(ua_str), "%d\n", BYPASS_CURR_UA);
+    snprintf(ua_str, sizeof(ua_str), "%d\n", ua);
     for (int i = 0; CURR_NODES[i]; i++)
         if (access(CURR_NODES[i], W_OK) == 0) wr_str(CURR_NODES[i], ua_str);
+}
+
+static void apply_votable_curr(int ma) {
+    char ma_str[32];
+    snprintf(ma_str, sizeof(ma_str), "%d\n", ma);
     for (int i = 0; CURR_VOTABLE_VAL[i]; i++) {
         if (access(CURR_VOTABLE_VAL[i], W_OK)) continue;
         if (access(CURR_VOTABLE_ACT[i], W_OK)) continue;
-        wr_str(CURR_VOTABLE_VAL[i], "500\n");
+        wr_str(CURR_VOTABLE_VAL[i], ma_str);
         wr_str(CURR_VOTABLE_ACT[i], "1\n");
     }
 }
 
-static void bypass_charge_off(void) {
+static void deactivate_votable(void) {
     for (int i = 0; CURR_VOTABLE_ACT[i]; i++)
         if (access(CURR_VOTABLE_ACT[i], W_OK) == 0)
             wr_str(CURR_VOTABLE_ACT[i], "0\n");
+}
+
+static void bypass_charge_on(void) {
+    apply_curr_nodes(BYPASS_CURR_UA);
+    apply_votable_curr(500);
+}
+
+static void bypass_charge_off(void) {
+    deactivate_votable();
 }
 
 static int saved_mi_curr = -1;
@@ -432,107 +459,87 @@ static void plc_charge_off(const char *moddir) {
 }
 
 static void curr_limit_apply(int ma) {
-    char ua_str[32];
-    snprintf(ua_str, sizeof(ua_str), "%d\n", ma * 1000);
-    for (int i = 0; CURR_NODES[i]; i++)
-        if (access(CURR_NODES[i], W_OK) == 0) wr_str(CURR_NODES[i], ua_str);
-    char ma_str[32];
-    snprintf(ma_str, sizeof(ma_str), "%d\n", ma);
-    for (int i = 0; CURR_VOTABLE_VAL[i]; i++) {
-        if (access(CURR_VOTABLE_VAL[i], W_OK)) continue;
-        if (access(CURR_VOTABLE_ACT[i], W_OK)) continue;
-        wr_str(CURR_VOTABLE_VAL[i], ma_str);
-        wr_str(CURR_VOTABLE_ACT[i], "1\n");
-    }
+    apply_curr_nodes(ma * 1000);
+    apply_votable_curr(ma);
 }
 
 static void curr_limit_off(void) {
-    for (int i = 0; CURR_VOTABLE_ACT[i]; i++)
-        if (access(CURR_VOTABLE_ACT[i], W_OK) == 0)
-            wr_str(CURR_VOTABLE_ACT[i], "0\n");
+    deactivate_votable();
 }
 
-static void cc_mount_val(int val) {
+/* 通用写入伪装文件并挂载 */
+static int write_fake_file(const char *path, const char *content, int len) {
     char dir[PLEN];
     snprintf(dir, sizeof(dir), "%s/fake", g_moddir);
     mkdirp(dir);
-    int fd = open(g_fake_cc, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0444);
-    if (fd >= 0) {
-        char buf[32];
-        int n = snprintf(buf, sizeof(buf), "%d\n", val);
-        write(fd, buf, n);
-        close(fd);
-    }
-    if (access(CC_NODE1, F_OK) == 0) mount(g_fake_cc, CC_NODE1, NULL, MS_BIND, NULL);
-    if (access(CC_NODE2, F_OK) == 0) mount(g_fake_cc, CC_NODE2, NULL, MS_BIND, NULL);
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0444);
+    if (fd < 0) return -1;
+    ssize_t w = write(fd, content, len);
+    (void)w;
+    close(fd);
+    return 0;
+}
+
+static int bind_mount(const char *src, const char *target) {
+    if (access(target, F_OK) != 0) return -1;
+    return mount(src, target, NULL, MS_BIND, NULL);
+}
+
+static void bind_umount(const char *target) {
+    umount2(target, MNT_DETACH);
+}
+
+static void cc_mount_val(int val) {
+    char buf[32];
+    int n = snprintf(buf, sizeof(buf), "%d\n", val);
+    write_fake_file(g_fake_cc, buf, n);
+    bind_mount(g_fake_cc, CC_NODE1);
+    bind_mount(g_fake_cc, CC_NODE2);
 }
 
 static void cc_umount(void) {
-    umount2(CC_NODE1, MNT_DETACH);
-    umount2(CC_NODE2, MNT_DETACH);
+    bind_umount(CC_NODE1);
+    bind_umount(CC_NODE2);
     unlink(g_fake_cc);
 }
 
 static void cap_spoof_mount(int val) {
-    char dir[PLEN];
-    snprintf(dir, sizeof(dir), "%s/fake", g_moddir);
-    mkdirp(dir);
-    int fd = open(g_fake_cap, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0444);
-    if (fd >= 0) {
-        char buf[32];
-        int n = snprintf(buf, sizeof(buf), "%d\n", val);
-        write(fd, buf, n);
-        close(fd);
-    }
-    if (access(CAP_TARGET, F_OK) == 0) mount(g_fake_cap, CAP_TARGET, NULL, MS_BIND, NULL);
+    char buf[32];
+    int n = snprintf(buf, sizeof(buf), "%d\n", val);
+    write_fake_file(g_fake_cap, buf, n);
+    bind_mount(g_fake_cap, CAP_TARGET);
 }
 
 static void cap_spoof_umount(void) {
-    umount2(CAP_TARGET, MNT_DETACH);
+    bind_umount(CAP_TARGET);
     unlink(g_fake_cap);
 }
 
 static void temp_spoof_mount(int val) {
-    char dir[PLEN];
-    snprintf(dir, sizeof(dir), "%s/fake", g_moddir);
-    mkdirp(dir);
-    int decicelsius = val * 10;
-    int fd = open(g_fake_temp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0444);
-    if (fd >= 0) {
-        char buf[32];
-        int n = snprintf(buf, sizeof(buf), "%d\n", decicelsius);
-        write(fd, buf, n);
-        close(fd);
-    }
-    for (int i = 0; TEMP_NODES[i]; i++) {
-        if (access(TEMP_NODES[i], F_OK) == 0)
-            mount(g_fake_temp, TEMP_NODES[i], NULL, MS_BIND, NULL);
-    }
+    char buf[32];
+    int n = snprintf(buf, sizeof(buf), "%d\n", val * 10);
+    write_fake_file(g_fake_temp, buf, n);
+    for (int i = 0; TEMP_NODES[i]; i++)
+        bind_mount(g_fake_temp, TEMP_NODES[i]);
 }
 
 static void temp_spoof_umount(void) {
     for (int i = 0; TEMP_NODES[i]; i++)
-        umount2(TEMP_NODES[i], MNT_DETACH);
+        bind_umount(TEMP_NODES[i]);
     unlink(g_fake_temp);
 }
 
 static void status_spoof_mount(const char *val) {
     char p[PLEN];
     snprintf(p, sizeof(p), "%s/fake/fakestatus", g_moddir);
-    char dir[PLEN];
-    snprintf(dir, sizeof(dir), "%s/fake", g_moddir);
-    mkdirp(dir);
-    int fd = open(p, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0444);
-    if (fd >= 0) {
-        write(fd, val, strlen(val));
-        write(fd, "\n", 1);
-        close(fd);
-    }
-    if (access(CHG_STATUS, F_OK) == 0) mount(p, CHG_STATUS, NULL, MS_BIND, NULL);
+    char content[64];
+    int n = snprintf(content, sizeof(content), "%s\n", val);
+    write_fake_file(p, content, n);
+    bind_mount(p, CHG_STATUS);
 }
 
 static void status_spoof_umount(void) {
-    umount2(CHG_STATUS, MNT_DETACH);
+    bind_umount(CHG_STATUS);
     char p[PLEN];
     snprintf(p, sizeof(p), "%s/fake/fakestatus", g_moddir);
     unlink(p);
@@ -561,13 +568,11 @@ static void *thr_chg(void *arg) {
     int mi_unlocked = 0;
     for (;;) {
         Config c = parse_config_cached();
-        char buf[32] = {0};
-        int fd = open(CHG_STATUS, O_RDONLY | O_CLOEXEC);
-        if (fd >= 0) { read(fd, buf, 31); close(fd); }
-        buf[strcspn(buf, "\n")] = 0;
+        char buf[32];
+        read_chg_status(buf, sizeof(buf));
 
-        int now_chg  = strcmp(buf, "Charging") == 0 || strcmp(buf, "Full") == 0;
-        int was_chg  = strcmp(prev, "Charging") == 0 || strcmp(prev, "Full") == 0;
+        int now_chg  = is_charging_status(buf);
+        int was_chg  = is_charging_status(prev);
 
         if (now_chg && !was_chg) {
             chg_unlock_on();
@@ -598,24 +603,21 @@ static void *thr_chg(void *arg) {
 
 static void *thr_plug(void *arg) {
     (void)arg;
+    time_t s_last = -1;
+    int    s_prev_interval = 0;
     for (;;) {
         sleep(10);
         Config c = parse_config_cached();
 
-        static time_t s_last         = -1;
-        static int    s_prev_interval = 0;
         int cur_interval = c.plug_interval;
         int was_off = (s_prev_interval == 0);
         s_prev_interval = cur_interval;
 
         if (c.mmi_bypass || cur_interval <= 0) continue;
 
-        char status[32] = {0};
-        int fd = open(CHG_STATUS, O_RDONLY | O_CLOEXEC);
-        if (fd >= 0) { read(fd, status, 31); close(fd); }
-        status[strcspn(status, "\n")] = 0;
-        int charging = (strcmp(status, "Charging") == 0 || strcmp(status, "Full") == 0);
-        if (!charging) continue;
+        char status[32];
+        read_chg_status(status, sizeof(status));
+        if (!is_charging_status(status)) continue;
 
         int soc = rd_int(CHIP_SOC);
         if (soc < 0) soc = rd_int(BAT_CAP);
@@ -707,40 +709,22 @@ int main(int argc, char *argv[]) {
     int status_spoof_on = c.status_spoof;
     int chg_unlock_on   = c.chg_unlock;
 
+    /* 状态切换宏：简化重复的 if-else 模式 */
+    #define TOGGLE(cfg_flag, state, on_fn, off_fn) do { \
+        if ((cfg_flag) && !(state)) { on_fn; (state) = 1; } \
+        else if (!(cfg_flag) && (state)) { off_fn; (state) = 0; } \
+    } while(0)
+
     for (;;) {
         c = parse_config_cached();
 
-        if (c.cc_spoof  && !cc_mounted)  { cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10); cc_mounted  = 1; }
-        if (!c.cc_spoof &&  cc_mounted)  { cc_umount();  cc_mounted  = 0; }
-
-        if (c.cap_mount && !cap_mounted) { cap_mount();  cap_mounted = 1; }
-        if (!c.cap_mount && cap_mounted) { cap_umount(); cap_mounted = 0; }
-
-        if (c.cap_spoof && !cap_spoof_on) {
-            cap_spoof_mount(c.cap_spoof_val); cap_spoof_on = 1;
-        } else if (!c.cap_spoof && cap_spoof_on) {
-            cap_spoof_umount(); cap_spoof_on = 0;
-        }
-        if (c.temp_spoof && !temp_spoof_on) {
-            temp_spoof_mount(c.temp_spoof_val); temp_spoof_on = 1;
-        } else if (!c.temp_spoof && temp_spoof_on) {
-            temp_spoof_umount(); temp_spoof_on = 0;
-        }
-        if (c.cc_spoof && !cc_spoof_val_on) {
-            cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10); cc_spoof_val_on = 1;
-        } else if (!c.cc_spoof && cc_spoof_val_on) {
-            cc_umount(); cc_spoof_val_on = 0;
-        }
-        if (c.status_spoof && !status_spoof_on) {
-            status_spoof_mount("Discharging"); status_spoof_on = 1;
-        } else if (!c.status_spoof && status_spoof_on) {
-            status_spoof_umount(); status_spoof_on = 0;
-        }
-        if (c.chg_unlock && !chg_unlock_on) {
-            chg_unlock_on = 1;
-        } else if (!c.chg_unlock && chg_unlock_on) {
-            unlock_chg_off(); chg_unlock_on = 0;
-        }
+        TOGGLE(c.cc_spoof, cc_mounted, cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10), cc_umount());
+        TOGGLE(c.cap_mount, cap_mounted, cap_mount(), cap_umount());
+        TOGGLE(c.cap_spoof, cap_spoof_on, cap_spoof_mount(c.cap_spoof_val), cap_spoof_umount());
+        TOGGLE(c.temp_spoof, temp_spoof_on, temp_spoof_mount(c.temp_spoof_val), temp_spoof_umount());
+        TOGGLE(c.cc_spoof, cc_spoof_val_on, cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10), cc_umount());
+        TOGGLE(c.status_spoof, status_spoof_on, status_spoof_mount("Discharging"), status_spoof_umount());
+        TOGGLE(c.chg_unlock, chg_unlock_on, (void)0, unlock_chg_off());
 
         if (!c.svc_enabled) {
             write_temp(0);
@@ -753,10 +737,10 @@ int main(int argc, char *argv[]) {
                 system("setprop ro.oplus.audio.thermal_control 1 2>/dev/null");
                 comp_on = 0;
             }
-            if (cap_spoof_on)    { cap_spoof_umount();    cap_spoof_on = 0; }
-            if (temp_spoof_on)   { temp_spoof_umount();   temp_spoof_on = 0; }
-            if (status_spoof_on) { status_spoof_umount(); status_spoof_on = 0; }
-            if (chg_unlock_on)   { unlock_chg_off();      chg_unlock_on = 0; }
+            TOGGLE(0, cap_spoof_on, (void)0, cap_spoof_umount());
+            TOGGLE(0, temp_spoof_on, (void)0, temp_spoof_umount());
+            TOGGLE(0, status_spoof_on, (void)0, status_spoof_umount());
+            TOGGLE(0, chg_unlock_on, (void)0, unlock_chg_off());
             system("dumpsys battery reset");
             last_state = 0;
             sleep(8);
@@ -765,40 +749,26 @@ int main(int argc, char *argv[]) {
 
         int chg = is_charging();
 
-        if (c.bypass_charge && !bypass_on) {
-            bypass_charge_on(); bypass_on = 1;
-        } else if (!c.bypass_charge && bypass_on) {
-            bypass_charge_off(); bypass_on = 0;
-        }
+        TOGGLE(c.bypass_charge, bypass_on, bypass_charge_on(), bypass_charge_off());
+        TOGGLE(c.mmi_bypass, mmi_on, mmi_bypass_on(), mmi_bypass_off());
+        TOGGLE(c.plc_charge, plc_on, plc_charge_on(g_moddir), plc_charge_off(g_moddir));
+        TOGGLE(c.oplus_comp, comp_on,
+            { system("setprop persist.sys.oplus.wifi.sla.game_high_temperature 1 2>/dev/null");
+              system("setprop ro.oplus.audio.thermal_control 0 2>/dev/null"); },
+            { system("setprop persist.sys.oplus.wifi.sla.game_high_temperature 0 2>/dev/null");
+              system("setprop ro.oplus.audio.thermal_control 1 2>/dev/null"); });
 
-        if (c.mmi_bypass && !mmi_on) {
-            mmi_bypass_on();  mmi_on = 1;
-        } else if (!c.mmi_bypass && mmi_on) {
-            mmi_bypass_off(); mmi_on = 0;
-        }
-
-        if (c.plc_charge && !plc_on) {
-            plc_charge_on(g_moddir);  plc_on = 1;
-        } else if (!c.plc_charge && plc_on) {
-            plc_charge_off(g_moddir); plc_on = 0;
-        }
-
-        if (c.oplus_comp && !comp_on) {
-            system("setprop persist.sys.oplus.wifi.sla.game_high_temperature 1 2>/dev/null");
-            system("setprop ro.oplus.audio.thermal_control 0 2>/dev/null");
-            comp_on = 1;
-        } else if (!c.oplus_comp && comp_on) {
-            system("setprop persist.sys.oplus.wifi.sla.game_high_temperature 0 2>/dev/null");
-            system("setprop ro.oplus.audio.thermal_control 1 2>/dev/null");
-            comp_on = 0;
-        }
-
-        if (c.curr_limit && !curr_lim_on) {
-            curr_limit_apply(c.curr_max_ma); curr_lim_on = 1; last_curr_ma = c.curr_max_ma;
-        } else if (c.curr_limit && curr_lim_on && c.curr_max_ma != last_curr_ma) {
-            curr_limit_apply(c.curr_max_ma); last_curr_ma = c.curr_max_ma;
-        } else if (!c.curr_limit && curr_lim_on) {
-            curr_limit_off(); curr_lim_on = 0; last_curr_ma = 0;
+        /* 电流限制：需要检测值变化 */
+        if (c.curr_limit) {
+            if (!curr_lim_on || c.curr_max_ma != last_curr_ma) {
+                curr_limit_apply(c.curr_max_ma);
+                curr_lim_on = 1;
+                last_curr_ma = c.curr_max_ma;
+            }
+        } else if (curr_lim_on) {
+            curr_limit_off();
+            curr_lim_on = 0;
+            last_curr_ma = 0;
         }
 
         if (chg) {

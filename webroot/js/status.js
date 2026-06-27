@@ -1,7 +1,7 @@
 let _initDone = false;
 /* DOM 缓存：减少重复 getElementById */
 const $ = (id, cache) => {
-  if (cache && cache[id]) return cache[id];
+  if (cache && cache[id] !== undefined) return cache[id];
   const el = document.getElementById(id);
   if (cache) cache[id] = el;
   return el;
@@ -22,6 +22,7 @@ function debounce(fn, ms) {
   if (_debounceTimer) { clearTimeout(_debounceTimer); }
   _debounceTimer = setTimeout(() => { _debounceTimer = null; fn(); }, ms);
 }
+
 async function svcStop() {
   await exec(`kill -9 $(awk '/^MAIN/{print $2}' '${PIDFILE}' 2>/dev/null) 2>/dev/null; true`);
   setTimeout(refreshStatus, 800);
@@ -38,36 +39,46 @@ async function refreshStatus() {
   _refreshing = true;
   try {
   const SEP = '||S||';
+  /* 单次 cat uevent + awk 提取多个字段，替代多次 grep 开销 */
+  const ueventCmd = `awk -F= '
+    /^POWER_SUPPLY_TEMP=/        {t=$2}
+    /^POWER_SUPPLY_CYCLE_COUNT=/ {c=$2}
+    /^POWER_SUPPLY_VOLTAGE_NOW=/ {v=$2}
+    /^POWER_SUPPLY_STATUS=/      {s=$2}
+    /^POWER_SUPPLY_CAPACITY=/    {p=$2}
+    END {printf "%s${SEP}%s${SEP}%s${SEP}%s${SEP}%s", t,c,v,s,p}
+  ' /sys/class/power_supply/battery/uevent 2>/dev/null`;
   const raw = await exec(
-    `cat /sys/class/power_supply/battery/uevent 2>/dev/null; printf '${SEP}'; ` +
-    `cat /sys/class/oplus_chg/battery/chip_soc 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; ` +
-    `cat '${PIDFILE}' 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; ` +
-    (_initDone ? `printf ''; printf '${SEP}'; printf ''` : `getprop ro.product.model 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; grep '^version=' '${MODDIR}/module.prop' 2>/dev/null | cut -d= -f2 | tr -d '\r\n'`) +
+    ueventCmd + `; printf '${SEP}'; ` +
+    `cat /sys/class/power_supply/battery/current_now 2>/dev/null | tr -d '\\r\\n'; printf '${SEP}'; ` +
+    `cat /sys/class/oplus_chg/battery/chip_soc 2>/dev/null | tr -d '\\r\\n'; printf '${SEP}'; ` +
+    `cat '${PIDFILE}' 2>/dev/null | tr -d '\\r\\n'; printf '${SEP}'; ` +
+    (_initDone ? `printf ''; printf '${SEP}'; printf ''` : `getprop ro.product.model 2>/dev/null | tr -d '\\r\\n'; printf '${SEP}'; grep '^version=' '${MODDIR}/module.prop' 2>/dev/null | cut -d= -f2 | tr -d '\\r\\n'`) +
     `; printf '${SEP}'; ` +
-    `cat /sys/class/power_supply/usb/present 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; ` +
-    `cat /sys/class/power_supply/usb/online 2>/dev/null | tr -d '\r\n'; printf '${SEP}'; ` +
-    `cat /sys/class/power_supply/ac/online 2>/dev/null | tr -d '\r\n'`,
+    `cat /sys/class/power_supply/usb/present 2>/dev/null | tr -d '\\r\\n'; printf '${SEP}'; ` +
+    `cat /sys/class/power_supply/usb/online 2>/dev/null | tr -d '\\r\\n'; printf '${SEP}'; ` +
+    `cat /sys/class/power_supply/ac/online 2>/dev/null | tr -d '\\r\\n'`,
     8000
   );
   const _p = raw.split(SEP);
-  const uev = parseUevent(_p[0]||'');
-  const tempRaw     = uev['POWER_SUPPLY_TEMP'] || '';
-  const cycleRaw    = uev['POWER_SUPPLY_CYCLE_COUNT'] || '';
-  const voltRaw     = uev['POWER_SUPPLY_VOLTAGE_NOW'] || '';
-  const statusRaw   = uev['POWER_SUPPLY_STATUS'] || '';
-  const capacityRaw = uev['POWER_SUPPLY_CAPACITY'] || '';
-  const currRaw     = uev['POWER_SUPPLY_CURRENT_NOW'] || '';
-  const chipSocRaw  = _p[1]||'';
-  const pidRaw      = _p[2]||'';
-  const model       = _p[3]||'';
-  const ver         = _p[4]||'';
-  const usbPresentRaw = _p[5]||'';
-  const usbOnlineRaw  = _p[6]||'';
-  const acOnlineRaw   = _p[7]||'';
+  const tempRaw     = _p[0]||'';
+  const cycleRaw    = _p[1]||'';
+  const voltRaw     = _p[2]||'';
+  const statusRaw   = _p[3]||'';
+  const capacityRaw = _p[4]||'';
+  const currRaw     = _p[5]||'';
+  const chipSocRaw  = _p[6]||'';
+  const pidRaw      = _p[7]||'';
+  const model       = _p[8]||'';
+  const ver         = _p[9]||'';
+  const usbPresentRaw = _p[10]||'';
+  const usbOnlineRaw  = _p[11]||'';
+  const acOnlineRaw   = _p[12]||'';
 
   const tempVal = parseInt(tempRaw || '-1');
   const tempC   = tempVal >= 0 ? tempVal / 10 : -1;
-  $('m-batt', _dom).innerHTML = (tempC >= 0 ? tempC.toFixed(1) : '--') + '<sup>°C</sup>';
+  const elBatt = $('m-batt', _dom);
+  if (elBatt) elBatt.innerHTML = (tempC >= 0 ? tempC.toFixed(1) : '--') + '<sup>°C</sup>';
   if (tempC > 0) pushBatt(tempC);
   if (_initDone) pushTemp(cfg.target_temp);
   const pg = $('page-status', _dom);
@@ -84,48 +95,64 @@ async function refreshStatus() {
   const acOnline   = parseInt(acOnlineRaw   || '0') === 1;
   const charging   = statusChg && (usbPresent || usbOnline || acOnline);
   const bc = $('badge-chg', _dom);
-  if (charging) { bc.textContent = '充电中'; bc.className = 'status-chip charging'; document.body.classList.add('charging'); }
-  else          { bc.textContent = '未充电'; bc.className = 'status-chip'; document.body.classList.remove('charging'); }
+  if (bc) {
+    if (charging) { bc.textContent = '充电中'; bc.className = 'status-chip charging'; document.body.classList.add('charging'); }
+    else          { bc.textContent = '未充电'; bc.className = 'status-chip'; document.body.classList.remove('charging'); }
+  }
 
   const soc     = parseInt(capacityRaw || '-1');
   const chipSoc = parseInt(chipSocRaw  || '-1');
-  $('soc-disp-num', _dom).textContent = soc >= 0 ? soc : '--';
-  $('soc-disp', _dom).textContent     = soc >= 0 ? soc : '--';
-  $('soc-real', _dom).textContent     = chipSoc >= 0 ? chipSoc : '--';
-  const socRealRow = $('soc-real', _dom)?.closest('.soc-detail-row');
+  const elSocNum = $('soc-disp-num', _dom);
+  const elSoc = $('soc-disp', _dom);
+  const elSocReal = $('soc-real', _dom);
+  if (elSocNum) elSocNum.textContent = soc >= 0 ? soc : '--';
+  if (elSoc) elSoc.textContent     = soc >= 0 ? soc : '--';
+  if (elSocReal) elSocReal.textContent = chipSoc >= 0 ? chipSoc : '--';
+  const socRealRow = elSocReal?.closest('.soc-detail-row');
   if (socRealRow) socRealRow.style.display = _deviceBrand === 'xiaomi' ? 'none' : '';
   updateSocRing(soc >= 0 ? soc : 0);
 
   const voltUv = parseInt(voltRaw || '0');
   const voltMv = voltUv > 0 ? Math.round(voltUv / 1000) : null;
-  $('b-volt', _dom).textContent = voltMv ? voltMv : '--';
+  const elVolt = $('b-volt', _dom);
+  if (elVolt) elVolt.textContent = voltMv ? voltMv : '--';
 
   const currMaRaw = parseInt(currRaw || '0');
   const currMa = currMaRaw;
-  $('b-curr', _dom).textContent = currMa;
+  const elCurr = $('b-curr', _dom);
+  if (elCurr) elCurr.textContent = currMa;
 
   const watt = (voltMv && currMa) ? ((voltMv / 1000) * Math.abs(currMa) / 1000).toFixed(2) : null;
-  $('b-watt', _dom).textContent = watt ? watt : '--';
+  const elWatt = $('b-watt', _dom);
+  if (elWatt) elWatt.textContent = watt ? watt : '--';
   const cellCurr = $('cell-curr', _dom);
   if (cellCurr) cellCurr.classList.toggle('charging-hi', charging && currMa > 0);
 
   const cycle = parseInt(cycleRaw || '-1');
-  $('b-cycle', _dom).textContent = cycle >= 0 ? cycle : '--';
+  const elCycle = $('b-cycle', _dom);
+  if (elCycle) elCycle.textContent = cycle >= 0 ? cycle : '--';
 
-  if (_initDone) $('m-target', _dom).innerHTML = cfg.target_temp + '<sup>°C</sup>';
+  if (_initDone) {
+    const elTarget = $('m-target', _dom);
+    if (elTarget) elTarget.innerHTML = cfg.target_temp + '<sup>°C</sup>';
+  }
 
   if (pidRaw) {
     const pid = pidRaw.trim().split(/\s+/)[1] || '';
-    $('proc-pid', _dom).textContent = pid ? 'PID ' + pid : '—';
-    const dot = $('proc-dot', _dom), st = $('proc-status', _dom);
-    if (pid) {
-      dot.className = 'pid-dot ok'; st.textContent = '运行中'; st.className = 'pid-badge';
-    } else {
-      dot.className = 'pid-dot err'; st.textContent = '离线'; st.className = 'pid-badge off';
+    const elPid = $('proc-pid', _dom);
+    const dot = $('proc-dot', _dom);
+    const st = $('proc-status', _dom);
+    if (elPid) elPid.textContent = pid ? 'PID ' + pid : '—';
+    if (dot && st) {
+      if (pid) {
+        dot.className = 'pid-dot ok'; st.textContent = '运行中'; st.className = 'pid-badge';
+      } else {
+        dot.className = 'pid-dot err'; st.textContent = '离线'; st.className = 'pid-badge off';
+      }
     }
   }
-  if (model) $('i-model', _dom).textContent = model;
-  if (ver) $('about-ver', _dom).textContent = ver + ' · 作者：石板上回荡的';
+  if (model) { const el = $('i-model', _dom); if (el) el.textContent = model; }
+  if (ver) { const el = $('about-ver', _dom); if (el) el.textContent = ver + ' · 作者：石板上回荡的'; }
   if (_initDone && typeof syncChgGateList === 'function') debounce(syncChgGateList, 50);
   } finally { _refreshing = false; }
 }
@@ -149,42 +176,49 @@ async function stopService() {
 
 let _deviceBrand = '';   /* xiaomi / oplus / unknown */
 let _deviceName  = '';   /* 商业机型名 */
+let _deviceDetected = false; /* 检测完成标记 */
 
 async function detectDevice() {
-  const [brand, mktname, dispname, oemname, model] = await Promise.all([
-    exec(`getprop ro.product.brand 2>/dev/null`),
-    exec(`getprop ro.product.marketname 2>/dev/null`),
-    exec(`getprop ro.product.display 2>/dev/null`),
-    exec(`getprop ro.vendor.oplus.market.name 2>/dev/null`),
-    exec(`getprop ro.product.model 2>/dev/null`),
-  ]);
-  const b = (brand || '').trim().toLowerCase();
-  /* 优先取包含空格或中文的（商业名），纯字母数字的通常是代号 */
-  const candidates = [oemname, mktname, dispname, model]
-    .map(s => (s || '').trim())
-    .filter(Boolean);
-  const name = candidates.find(s => /[\u4e00-\u9fa5]/.test(s) || /\s/.test(s)) || candidates[0] || '';
-  _deviceName = name;
+  try {
+    const [brand, mktname, dispname, oemname, model] = await Promise.all([
+      exec(`getprop ro.product.brand 2>/dev/null`),
+      exec(`getprop ro.product.marketname 2>/dev/null`),
+      exec(`getprop ro.product.display 2>/dev/null`),
+      exec(`getprop ro.vendor.oplus.market.name 2>/dev/null`),
+      exec(`getprop ro.product.model 2>/dev/null`),
+    ]);
+    const b = (brand || '').trim().toLowerCase();
+    /* 优先取包含空格或中文的（商业名），纯字母数字的通常是代号 */
+    const candidates = [oemname, mktname, dispname, model]
+      .map(s => (s || '').trim())
+      .filter(Boolean);
+    const name = candidates.find(s => /[一-龥]/.test(s) || /\s/.test(s)) || candidates[0] || '';
+    _deviceName = name;
 
-  if (b === 'xiaomi' || b === 'redmi' || b === 'poco') {
-    _deviceBrand = 'xiaomi';
-  } else if (b === 'oppo' || b === 'oneplus' || b === 'realme' || b === 'oplus') {
-    _deviceBrand = 'oplus';
-  } else {
-    _deviceBrand = 'unknown';
-  }
-
-  const el = document.getElementById('greeting-text');
-  if (el) {
-    if (name) {
-      el.textContent = '尊贵的 ' + name + ' 用户，你好';
-    } else if (_deviceBrand !== 'unknown') {
-      el.textContent = '';
+    if (b === 'xiaomi' || b === 'redmi' || b === 'poco') {
+      _deviceBrand = 'xiaomi';
+    } else if (b === 'oppo' || b === 'oneplus' || b === 'realme' || b === 'oplus') {
+      _deviceBrand = 'oplus';
+    } else {
+      _deviceBrand = 'unknown';
     }
-    /* unknown 且无商业名：不显示，避免用代号 */
-  }
 
-  applyChargingPanel();
+    const el = document.getElementById('greeting-text');
+    if (el) {
+      if (name) {
+        el.textContent = '尊贵的 ' + name + ' 用户，你好';
+      } else if (_deviceBrand !== 'unknown') {
+        el.textContent = '';
+      }
+      /* unknown 且无商业名：不显示，避免用代号 */
+    }
+  } catch (e) {
+    /* 检测失败时标记为 unknown */
+    _deviceBrand = 'unknown';
+  } finally {
+    _deviceDetected = true;
+    applyChargingPanel();
+  }
 }
 
 function applyChargingPanel() {
@@ -198,13 +232,11 @@ function applyChargingPanel() {
     mi.style.display    = '';
     oplus.style.display = '';
     unk.style.display   = 'none';
-  } else if (_deviceBrand === '') {
-    /* 还在检测中，三个都隐藏，未识别面板显示检测中 */
+  } else if (!_deviceDetected) {
+    /* 检测未完成时，先显示 oplus 面板作为默认（本模块面向 oplus 设备） */
     mi.style.display    = 'none';
-    oplus.style.display = 'none';
-    unk.style.display   = '';
-    const msg = document.getElementById('chg-unknown-msg');
-    if (msg) msg.textContent = '正在识别设备品牌…';
+    oplus.style.display = '';
+    unk.style.display   = 'none';
   } else {
     mi.style.display    = _deviceBrand === 'xiaomi'  ? '' : 'none';
     oplus.style.display = _deviceBrand === 'oplus'   ? '' : 'none';
@@ -217,13 +249,13 @@ function applyChargingPanel() {
 function onDebugToggle() {
   const dbg = document.getElementById('sw-debug');
   const miLabel    = document.querySelector('#chg-panel-mi .section-label');
-  const oplusLabel = document.getElementById('oplus-label');
+  const oplusLabel = document.querySelector('#chg-panel-oplus .section-label');
   if (dbg && dbg.checked) {
     if (miLabel)    miLabel.textContent    = '小米 / 红米';
     if (oplusLabel) oplusLabel.textContent = 'OPPO / 一加 / 真我';
   } else {
     if (miLabel)    miLabel.textContent    = '充电绕过';
-    if (oplusLabel) oplusLabel.textContent = '充电绕过';
+    if (oplusLabel) oplusLabel.textContent = '温度墙';
   }
   applyChargingPanel();
 }
@@ -291,7 +323,7 @@ const PLUG_INTERVALS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 function adjPlug(key, delta) {
   if (key === 'interval') {
     let idx = PLUG_INTERVALS.indexOf(cfg.plug_interval);
-    if (idx === -1) idx = 1;  /* fallback to 1min */
+    if (idx === -1) idx = 1;
     const ni = Math.max(1, Math.min(PLUG_INTERVALS.length - 1, idx + delta));
     cfg.plug_interval = PLUG_INTERVALS[ni];
     const el = document.getElementById('plug-interval-val');
@@ -328,7 +360,6 @@ async function applyOplus() {
 }
 
 async function refreshChargingPage() {
-  /* 同步 mi 面板的开关状态到 cfg */
   const swCl = document.getElementById('sw-currlimit');
   const swBp = document.getElementById('sw-bypass');
   if (swCl) swCl.checked = !!cfg.currlimit;
@@ -341,7 +372,8 @@ async function refreshChargingPage() {
   if (bpIcon) bpIcon.style.background = cfg.bypass
     ? 'color-mix(in srgb,var(--clr-primary-container) 80%,transparent)'
     : 'color-mix(in srgb,var(--clr-secondary-container) 60%,transparent)';
-  if (_deviceBrand === 'oplus') {
+  /* oplus 面板控件同步（检测未完成时也同步，因为默认显示 oplus 面板） */
+  if (_deviceBrand === 'oplus' || !_deviceDetected) {
     const sw = document.getElementById('sw-mmi');
     if (sw) { sw.checked = !!cfg.mmi_bypass; onMmiToggle(); }
     const swPlc = document.getElementById('sw-plc');
@@ -360,8 +392,8 @@ function socColor(pct) {
 function updateSocRing(pct) {
   const circ = 314.16;
   const offset = circ * (1 - Math.max(0, Math.min(100, pct)) / 100);
-  const arc = $('soc-ring-arc', _dom);
-  const fill = $('soc-fill', _dom);
+  const arc = document.getElementById('soc-ring-arc');
+  const fill = document.getElementById('soc-fill');
   if (!arc && !fill) return;
   const col = socColor(pct);
   if (arc) { arc.style.strokeDashoffset = offset.toFixed(2); arc.style.stroke = col; }
@@ -394,13 +426,4 @@ function drawBattSparkline() {
     ctx.bezierCurveTo(mx2,pts[i-1].y, mx2,pts[i].y, pts[i].x,pts[i].y);
   }
   ctx.strokeStyle = pr; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke();
-}
-
-function parseUevent(raw) {
-  const m = {};
-  raw.split('\n').forEach(l => {
-    const i = l.indexOf('=');
-    if (i > 0) m[l.slice(0, i).trim()] = l.slice(i + 1).trim();
-  });
-  return m;
 }

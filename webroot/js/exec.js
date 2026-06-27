@@ -1,3 +1,4 @@
+/* ─── exec bridge ─── */
 function exec(cmd, timeout=5000) {
   const base = new Promise(r => {
     try {

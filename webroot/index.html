@@ -6,7 +6,8 @@
 <meta name="renderer" content="webkit">
 <meta name="color-scheme" content="light dark">
 <title>Fresh-Battery</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Google Fonts 国内不可用，改用系统字体栈（CJK 系统自带 Noto Sans SC） -->
+<!-- <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"> -->
 <link rel="stylesheet" href="css/style.css">
 
 <!-- KernelSU 系统动态取色（壁纸 Monet 色），仅在 KernelSU Manager WebView 内生效 -->
@@ -16,7 +17,6 @@
 <!-- @material/web — Google 官方 M3 Web Components，buildless CDN -->
 <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@material/web@2.2.0/button/filled-button.js">
 <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@material/web@2.2.0/button/outlined-button.js">
-<!-- slider replaced with native input[type=range] -->
 <script type="importmap">
 {
   "imports": {
@@ -28,13 +28,7 @@
   import '@material/web/button/filled-button.js';
   import '@material/web/button/outlined-button.js';
 </script>
-
-<link rel="preload" href="js/ui.js" as="script">
-<link rel="preload" href="js/exec.js" as="script">
-<link rel="preload" href="js/theme.js" as="script">
-<link rel="preload" href="js/config.js" as="script">
-<link rel="preload" href="js/status.js" as="script">
-<link rel="preload" href="js/charging.js" as="script">
+<!-- defer 脚本在 HTML 解析时即可发现，无需额外 preload -->
 
 </head>
 <body style="opacity:0;transition:opacity .25s ease">

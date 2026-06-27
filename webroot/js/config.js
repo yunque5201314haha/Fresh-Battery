@@ -6,14 +6,11 @@ Object.assign(cfg, {
 
 async function loadConfig() {
   const SEP = '||FB||';
-  const keys = ['目标温度','服务开关','循环伪装','CPU频率解锁','电量挂载','MI伪旁路充电','电流限制','最大电流','O伪旁路充电','伪插拔间隔','伪插拔电量','伪Osys旁路充电','组件控制','WiFi高温加速','音频热控',
-    '充电开启','电量伪装','电量伪装值','温度伪装','温度伪装值','循环伪装值','充放状态伪装','亮屏充电限制',
-    '电量伪装充电','温度伪装充电','循环伪装充电','充放状态充电','亮屏充电充电',
-    'MI旁路充电','电流限制充电','O旁路充电','Osys旁路充电','伪插拔充电','组件控制充电'];
-  const grepCmds = keys.map(k =>
-    `grep -m1 "^${k}=" '${CFG}' 2>/dev/null | cut -d= -f2 | tr -d '\r\n'`
-  ).join(`; printf '${SEP}'; `);
-  const raw = await exec(`[ -f '${CFG}' ] || { echo '目标温度=34'; echo '服务开关=0'; echo '循环伪装=0'; echo 'CPU频率解锁=0'; echo '电量挂载=0'; echo 'MI伪旁路充电=0'; echo '电流限制=0'; echo '最大电流=22000'; echo 'O伪旁路充电=0'; echo '伪插拔间隔=0'; echo '伪插拔电量=80'; echo '伪Osys旁路充电=0'; echo '组件控制=0'; echo 'WiFi高温加速=0'; echo '音频热控=0'; echo '充电开启=0'; echo '电量伪装=0'; echo '电量伪装值=80'; echo '温度伪装=0'; echo '温度伪装值=34'; echo '循环伪装值=10'; echo '充放状态伪装=0'; echo '亮屏充电限制=0'; echo '电量伪装充电=0'; echo '温度伪装充电=0'; echo '循环伪装充电=0'; echo '充放状态充电=0'; echo '亮屏充电充电=0'; echo 'MI旁路充电=0'; echo '电流限制充电=0'; echo 'O旁路充电=0'; echo 'Osys旁路充电=0'; echo '伪插拔充电=0'; echo '组件控制充电=0'; } > '${CFG}'; printf '${SEP}'; ` + grepCmds, 10000);
+  /* 用单次 awk 读取配置文件，替代 34 次 grep 调用 */
+  const cfgKeys = '目标温度,服务开关,循环伪装,CPU频率解锁,电量挂载,MI伪旁路充电,电流限制,最大电流,O伪旁路充电,伪插拔间隔,伪插拔电量,伪Osys旁路充电,组件控制,WiFi高温加速,音频热控,充电开启,电量伪装,电量伪装值,温度伪装,温度伪装值,循环伪装值,充放状态伪装,亮屏充电限制,电量伪装充电,温度伪装充电,循环伪装充电,充放状态充电,亮屏充电充电,MI旁路充电,电流限制充电,O旁路充电,Osys旁路充电,伪插拔充电,组件控制充电';
+  const defaults = '目标温度=34\n服务开关=0\n循环伪装=0\nCPU频率解锁=0\n电量挂载=0\nMI伪旁路充电=0\n电流限制=0\n最大电流=22000\nO伪旁路充电=0\n伪插拔间隔=0\n伪插拔电量=80\n伪Osys旁路充电=0\n组件控制=0\nWiFi高温加速=0\n音频热控=0\n充电开启=0\n电量伪装=0\n电量伪装值=80\n温度伪装=0\n温度伪装值=34\n循环伪装值=10\n充放状态伪装=0\n亮屏充电限制=0\n电量伪装充电=0\n温度伪装充电=0\n循环伪装充电=0\n充放状态充电=0\n亮屏充电充电=0\nMI旁路充电=0\n电流限制充电=0\nO旁路充电=0\nOsys旁路充电=0\n伪插拔充电=0\n组件控制充电=0';
+  const awkScript = `awk -F= 'BEGIN{n=split("${cfgKeys}",k,","); for(i=1;i<=n;i++) v[i]=""} {for(i=1;i<=n;i++) if($1==k[i]) v[i]=$2} END{for(i=1;i<=n;i++) printf "%s%s",v[i],(i<n?"${SEP}":"")}' '${CFG}'`;
+  const raw = await exec(`[ -f '${CFG}' ] || printf '${defaults}\\n' > '${CFG}'; printf '${SEP}'; ` + awkScript, 10000);
   const parts = raw.split(SEP);
   const v = i => (parts[i] || '').trim();
   const vi = i => parseInt(v(i), 10);
@@ -378,55 +375,3 @@ function onChgUnlockToggle() {
   syncChgGateList();
 }
 
-function socColor(pct) {
-  if (pct >= 60) return '#4CAF50';
-  if (pct >= 30) return '#FF9800';
-  return '#F44336';
-}
-function updateSocRing(pct) {
-  const circ = 314.16;
-  const offset = circ * (1 - Math.max(0, Math.min(100, pct)) / 100);
-  const arc = document.getElementById('soc-ring-arc');
-  const fill = document.getElementById('soc-fill');
-  const col = socColor(pct);
-  if (arc) { arc.style.strokeDashoffset = offset.toFixed(2); arc.style.stroke = col; }
-  if (fill) { fill.style.width = Math.min(pct,100) + '%'; fill.style.background = col; }
-}
-
-const battHistory = [];
-function pushBatt(v) {
-  if (typeof v === 'number' && v > 0) { battHistory.push(v); if (battHistory.length > 30) battHistory.shift(); }
-  drawBattSparkline();
-}
-function drawBattSparkline() {
-  const c = document.getElementById('sparkline-batt'); if (!c) return;
-  const W = c.offsetWidth || 120, H = 28, dpr = window.devicePixelRatio || 1;
-  c.width = W * dpr; c.height = H * dpr;
-  const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
-  if (battHistory.length < 2) { ctx.clearRect(0,0,W,H); return; }
-  const mn = Math.min(...battHistory)-1, mx = Math.max(...battHistory)+1;
-  const pts = battHistory.map((v,i) => ({ x: i/(battHistory.length-1)*W, y: H-(v-mn)/(mx-mn)*(H-6)-3 }));
-  const cs = getComputedStyle(document.documentElement);
-  const pr = cs.getPropertyValue('--clr-secondary').trim() || '#625B71';
-  ctx.beginPath(); ctx.moveTo(pts[0].x, H);
-  pts.forEach(p => ctx.lineTo(p.x, p.y));
-  ctx.lineTo(pts[pts.length-1].x, H); ctx.closePath();
-  const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, pr+'55'); g.addColorStop(1, pr+'00');
-  ctx.fillStyle = g; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i=1; i<pts.length; i++) {
-    const mx2 = (pts[i-1].x + pts[i].x)/2;
-    ctx.bezierCurveTo(mx2,pts[i-1].y, mx2,pts[i].y, pts[i].x,pts[i].y);
-  }
-  ctx.strokeStyle = pr; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.stroke();
-}
-
-function parseUevent(raw) {
-  const m = {};
-  raw.split('\n').forEach(l => {
-    const i = l.indexOf('=');
-    if (i > 0) m[l.slice(0, i).trim()] = l.slice(i + 1).trim();
-  });
-  return m;
-}
