@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Fresh-Battery</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="js/style.css">
+<link rel="stylesheet" href="css/style.css">
 
 <!-- KernelSU 系统动态取色（壁纸 Monet 色），仅在 KernelSU Manager WebView 内生效 -->
 <link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
@@ -330,9 +330,9 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
               更新网盘
             </button>
-            <button class="link-btn" onclick="openUrl('/* TODO: 填入交流群链接 */')">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-              交流群
+            <button class="link-btn" onclick="openUrl('https://t.me/freshcibuild')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.4-5.94c.73-.33 1.43.18 1.15 1.3l-2.63 12.4c-.18.89-.74 1.1-1.5.69l-4.14-3.05-2 1.93c-.2.2-.37.37-.72.37z"/></svg>
+              Telegram
             </button>
           </div>
         </div>
@@ -341,25 +341,20 @@
         <div class="section-label">作者</div>
         <div class="card card-no-chg">
           <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/38698278')">
-            <img class="author-avatar" src="js/avatar.png" alt="川秋">
+            <img class="author-avatar" src="img/avatar.png" alt="川秋">
             <div class="author-info">
               <div class="author-name">石板上回荡的</div>
               <div class="author-bio">点击设置我的签名</div>
             </div>
             <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
           </div>
-          <div class="donate-row" onclick="openDonate()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--clr-primary)"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            <span>捐赠支持一下</span>
-            <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
           </div>
-        </div>
 
         <!-- 代码节点/支持者 -->
         <div class="section-label">代码节点 / 支持者</div>
         <div class="card card-no-chg">
           <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/4262905')">
-            <img class="author-avatar" src="js/阮mumu.jpg" alt="阮mumu">
+            <img class="author-avatar" src="img/阮mumu.jpg" alt="阮mumu">
             <div class="author-info">
               <div class="author-name">阮mumu</div>
               <div class="author-bio">CoolAPK</div>
@@ -367,7 +362,7 @@
             <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
           </div>
           <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" onclick="openUrl('https://www.coolapk.com/u/9510475')">
-            <img class="author-avatar" src="js/她说好了.jpg" alt="她说好了">
+            <img class="author-avatar" src="img/她说好了.jpg" alt="她说好了">
             <div class="author-info">
               <div class="author-name">她说好了</div>
               <div class="author-bio">CoolAPK</div>
@@ -375,7 +370,7 @@
             <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
           </div>
           <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" onclick="openUrl('https://www.coolapk.com/u/716079')">
-            <img class="author-avatar" src="js/bybycode.jpg" alt="bybycode">
+            <img class="author-avatar" src="img/bybycode.jpg" alt="bybycode">
             <div class="author-info">
               <div class="author-name">bybycode</div>
               <div class="author-bio">CoolAPK</div>
@@ -383,12 +378,6 @@
             <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
           </div>
         </div>
-
-        <!-- 捐赠弹窗 -->
-        <div id="donate-overlay" onclick="closeDonate()">
-          <img src="js/donate.png" id="donate-img">
-        </div>
-
         <div class="about-footer">抄了 Metahybird 的底栏作业</div>
 
       </div>

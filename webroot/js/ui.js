@@ -134,25 +134,3 @@ const CHIP_SOC= '/sys/class/oplus_chg/battery/chip_soc';
 const BAT_CAP = '/sys/class/power_supply/battery/capacity';
 const CPU_LMT = '/proc/game_opt/disable_cpufreq_limit';
 
-/* ── 捐赠弹窗动画 ── */
-function openDonate() {
-  const ov = document.getElementById('donate-overlay');
-  const img = document.getElementById('donate-img');
-  if (!ov) return;
-  ov.style.display = 'flex';
-  requestAnimationFrame(() => {
-    ov.style.background = 'rgba(0,0,0,.6)';
-    ov.style.backdropFilter = 'blur(6px)';
-    if (img) { img.style.transform = 'scale(1)'; img.style.opacity = '1'; }
-  });
-}
-
-function closeDonate() {
-  const ov = document.getElementById('donate-overlay');
-  const img = document.getElementById('donate-img');
-  if (!ov) return;
-  ov.style.background = 'rgba(0,0,0,0)';
-  ov.style.backdropFilter = 'blur(0px)';
-  if (img) { img.style.transform = 'scale(.85)'; img.style.opacity = '0'; }
-  setTimeout(() => { ov.style.display = 'none'; }, 280);
-}
