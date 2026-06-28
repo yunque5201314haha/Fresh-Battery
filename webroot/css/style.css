@@ -536,66 +536,27 @@ canvas.sparkline { width: 100%; height: 32px; display: block; }
 }
 
 /*
-Buttons — @material/web 官方组件
-   <md-filled-button>/<md-outlined-button> 自带形状/动效（Shadow DOM），
-   这里只调整尺寸（贴近 M3E Medium=56dp）和布局
+Buttons — 原生 M3 风格按钮
 */
-md-filled-button, md-outlined-button {
-  --md-filled-button-container-height: 56px;
-  --md-outlined-button-container-height: 56px;
-  --md-filled-button-label-text-size: 16px;
-  --md-outlined-button-label-text-size: 16px;
-  --md-filled-button-label-text-weight: 600;
-  --md-outlined-button-label-text-weight: 600;
-  --md-filled-button-icon-size: 18px;
-  --md-outlined-button-icon-size: 18px;
-  --md-filled-button-container-shape: var(--shape-l-inc);
-  --md-outlined-button-container-shape: var(--shape-l-inc);
-}
-.btn-row md-filled-button,
-.btn-row md-outlined-button {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Web Component CDN 回退
-   当 @material/web 从 CDN 加载失败（无网络/CDN 被墙/超时），
-   自定义元素不会升级，默认 display:inline 导致裸文字。
-   :not(:defined) 仅在元素未注册时生效，CDN 正常后自动失效。 */
-md-filled-button:not(:defined),
-md-outlined-button:not(:defined) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 56px;
-  padding: 16px 24px;
+.btn-filled, .btn-outlined {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 56px; padding: 16px 24px;
   font: 600 16px/1 var(--font);
-  cursor: pointer;
-  -webkit-user-select: none;
-  user-select: none;
-  white-space: nowrap;
-  text-decoration: none;
-  border-radius: var(--shape-l-inc);
+  cursor: pointer; border-radius: var(--shape-l-inc);
   transition: opacity .15s;
+  -webkit-user-select: none; user-select: none;
+  white-space: nowrap;
 }
-md-filled-button:not(:defined) {
-  background: var(--clr-primary);
-  color: var(--clr-on-primary);
-  border: none;
+.btn-filled {
+  background: var(--clr-primary); color: var(--clr-on-primary); border: none;
 }
-md-outlined-button:not(:defined) {
-  background: transparent;
-  color: var(--clr-primary);
+.btn-outlined {
+  background: transparent; color: var(--clr-primary);
   border: 2px solid var(--clr-outline);
 }
-md-filled-button:not(:defined):active,
-md-outlined-button:not(:defined):active {
-  opacity: .8;
-}
-.btn-row md-filled-button:not(:defined),
-.btn-row md-outlined-button:not(:defined) {
-  flex: 1;
-}
+.btn-filled:active, .btn-outlined:active { opacity: .8; }
+.btn-filled svg { width: 18px; height: 18px; fill: currentColor; }
+.btn-row .btn-filled, .btn-row .btn-outlined { flex: 1; min-width: 0; }
 
 
 
@@ -781,8 +742,6 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 .comp-row .toggle-switch {
   align-self: center;
 }
-/* md-switch 回退 — 隐藏未定义的 Web Component */
-md-switch:not(:defined) { display: none; }
 
 /*
 About Page

@@ -49,14 +49,6 @@
   if (typeof refreshStyleCache === 'function') refreshStyleCache();
   if (typeof themeRefreshStyleCache === 'function') themeRefreshStyleCache();
   await Promise.all([refreshStatus(), detectDevice()]);
-  /* 等待 @material/web 组件注册完成，避免淡入时出现未升级的裸元素闪烁；
-     但最多等 1.5s——没网络/CDN 加载失败时也要正常显示界面 */
-  const whenComponentsReady = Promise.all([
-    customElements.whenDefined('md-filled-button'),
-    customElements.whenDefined('md-outlined-button'),
-  ]);
-  const timeout = new Promise(r => setTimeout(r, 1500));
-  await Promise.race([whenComponentsReady, timeout]);
   _initDone = true;
   applyChargingPanel();
   refreshStatus();

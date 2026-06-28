@@ -14,21 +14,6 @@
 <link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
 <link rel="stylesheet" href="https://mui.kernelsu.org/internal/colors.css">
 
-<!-- @material/web — Google 官方 M3 Web Components，buildless CDN -->
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@material/web@2.2.0/button/filled-button.js">
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@material/web@2.2.0/button/outlined-button.js">
-<script type="importmap">
-{
-  "imports": {
-    "@material/web/": "https://cdn.jsdelivr.net/npm/@material/web@2.2.0/"
-  }
-}
-</script>
-<script type="module">
-  import '@material/web/button/filled-button.js';
-  import '@material/web/button/outlined-button.js';
-</script>
-<!-- defer 脚本在 HTML 解析时即可发现，无需额外 preload -->
 
 </head>
 <body style="opacity:0;transition:opacity .25s ease">
@@ -140,10 +125,10 @@
         </div>
 
         <div class="center-btn" style="gap:10px">
-          <md-filled-button onclick="popBtn(this);refreshStatus()">
-            <svg slot="icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          <button class="btn-filled" onclick="popBtn(this);refreshStatus()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             刷新
-          </md-filled-button>
+          </button>
         </div>
 
       </div>
@@ -275,8 +260,8 @@
         </div>
 
         <div class="btn-row">
-          <md-outlined-button onclick="popBtn(this);saveConfig()">保存配置</md-outlined-button>
-          <md-filled-button   onclick="popBtn(this);applyNow()">立即生效</md-filled-button>
+          <button class="btn-outlined" onclick="popBtn(this);saveConfig()">保存配置</button>
+          <button class="btn-filled" onclick="popBtn(this);applyNow()">立即生效</button>
         </div>
 
       </div>
@@ -409,8 +394,8 @@
           </div>
 
           <div class="btn-row">
-            <md-outlined-button onclick="popBtn(this);saveConfig()">保存配置</md-outlined-button>
-            <md-filled-button   onclick="popBtn(this);applyNow()">立即生效</md-filled-button>
+            <button class="btn-outlined" onclick="popBtn(this);saveConfig()">保存配置</button>
+            <button class="btn-filled" onclick="popBtn(this);applyNow()">立即生效</button>
           </div>
         </div>
 
@@ -545,8 +530,8 @@
           </div>
 
           <div class="btn-row">
-            <md-outlined-button onclick="popBtn(this);saveConfig()">保存配置</md-outlined-button>
-            <md-filled-button   onclick="popBtn(this);applyOplus()">立即生效</md-filled-button>
+            <button class="btn-outlined" onclick="popBtn(this);saveConfig()">保存配置</button>
+            <button class="btn-filled" onclick="popBtn(this);applyOplus()">立即生效</button>
           </div>
         </div>
 
