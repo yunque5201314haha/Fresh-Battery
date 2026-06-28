@@ -136,14 +136,40 @@ async function loadLog() {
   const el = document.getElementById('log-content');
   if (!el) return;
   el.textContent = '加载中…';
+  /* 同步 frlog 开关状态 */
   const raw = await exec(`cat '${LOGFILE}' 2>/dev/null | tail -500`, 8000);
   el.textContent = raw || '（暂无日志）';
   el.scrollTop = el.scrollHeight;
+  /* 读取 frlog 开关 */
+  const v = await exec(`grep '^日志输出=' '${CFG}' 2>/dev/null | cut -d= -f2`);
+  const sw = document.getElementById('sw-frlog');
+  if (sw) sw.checked = (v || '').trim() === '1';
+  const ic = document.getElementById('frlog-icon');
+  if (ic) ic.style.background = (sw && sw.checked)
+    ? 'color-mix(in srgb,var(--clr-primary-container) 80%,transparent)'
+    : 'color-mix(in srgb,var(--clr-secondary-container) 60%,transparent)';
 }
 
 async function clearLog() {
   if (!confirm('确定清空日志？')) return;
   await exec(`printf '' > '${LOGFILE}' 2>/dev/null; true`);
   loadLog();
+}
+
+async function onFrlogToggle() {
+  const sw = document.getElementById('sw-frlog');
+  const on = sw && sw.checked;
+  const ic = document.getElementById('frlog-icon');
+  if (ic) ic.style.background = on
+    ? 'color-mix(in srgb,var(--clr-primary-container) 80%,transparent)'
+    : 'color-mix(in srgb,var(--clr-secondary-container) 60%,transparent)';
+  /* 更新配置文件 */
+  await exec(`sed -i 's/^日志输出=.*/日志输出=${on?1:0}/' '${CFG}' 2>/dev/null; true`);
+  /* 启停 frlog */
+  if (on) {
+    await exec(`killall frlog 2>/dev/null; '${MODDIR}/frlog' '${MODDIR}' >/dev/null 2>&1 &`);
+  } else {
+    await exec(`killall frlog 2>/dev/null; true`);
+  }
 }
 

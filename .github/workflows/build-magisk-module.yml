@@ -16,8 +16,10 @@ jobs:
       - name: Install gcc
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc
 
-      - name: Compile MAIN binary
-        run: gcc -O2 -o MAIN main.c log.c -lpthread
+      - name: Compile binaries
+        run: |
+          gcc -O2 -o MAIN main.c log.c -lpthread
+          gcc -O2 -o frlog frlog.c
 
       - name: Package Magisk Module
         id: package
@@ -35,7 +37,7 @@ jobs:
           echo "MODULE_VER=${MODULE_VER}" >> $GITHUB_ENV
           echo "BUILD_NUM=${BUILD_NUM}" >> $GITHUB_ENV
           mkdir -p _module
-          cp -r META-INF webroot customize.sh module.prop service.sh uninstall.sh MAIN _module/
+          cp -r META-INF webroot customize.sh module.prop service.sh uninstall.sh MAIN frlog _module/
           cd _module && zip -r0 "../${ZIP_NAME}" . && cd ..
 
       - name: Prepare Telegram message

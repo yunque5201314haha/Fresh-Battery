@@ -1,6 +1,6 @@
 /*
- * log.c — FreshBattery 日志模块
- * 写文件 + logcat，100KB 固定大小轮转
+ * log.c — FreshBattery 日志文件写入
+ * 仅写文件，logcat 输出由独立进程 frlog 负责
  */
 
 #include <stdio.h>
@@ -41,19 +41,13 @@ static void log_rotate(void) {
 }
 
 void fb_log(const char *tag, const char *fmt, ...) {
+    if (!g_log[0]) return;
     char msg[256];
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(msg, sizeof(msg), fmt, ap);
     va_end(ap);
 
-    /* logcat */
-    char lc[320];
-    snprintf(lc, sizeof(lc), "log -t FreshBattery '%s: %s' 2>/dev/null", tag, msg);
-    system(lc);
-
-    /* 文件 */
-    if (!g_log[0]) return;
     log_rotate();
     int fd = open(g_log, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (fd < 0) return;
