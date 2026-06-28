@@ -294,7 +294,7 @@ function syncChgGateList() {
     ? items.map(i =>
         '<div class="chg-gate-item">' +
           '<label class="chg-gate-switch">' +
-            '<input type="checkbox" id="' + i.id + '" onchange="onChgSpoofChg(this)"' + (i.chg ? ' checked' : '') + '>' +
+            '<input type="checkbox" id="' + i.id + '"' + (i.chg ? ' checked' : '') + '>' +
             '<span class="track"></span>' +
           '</label>' +
           '<span class="chg-gate-opt-label">充电专属</span>' +

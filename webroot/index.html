@@ -16,7 +16,7 @@
 
 
 </head>
-<body style="opacity:0;transition:opacity .25s ease">
+<body>
 <div id="app">
   <div id="main">
 
@@ -33,6 +33,7 @@
             <div class="tile-val" id="m-target">--<sup>°C</sup></div>
             <div class="tile-path">/proc/shell-temp</div>
             <div class="sparkline-wrap">
+              <div class="sparkline-labels"><span id="sparkline-max">--</span><span id="sparkline-min">--</span></div>
               <canvas class="sparkline" id="sparkline"></canvas>
             </div>
           </div>
@@ -48,7 +49,7 @@
           </div>
         </div>
 
-        <div class="card soc-ring-card">
+        <div class="card card-filled soc-ring-card">
           <div class="soc-ring-wrap">
             <svg class="soc-ring-svg" viewBox="0 0 120 120">
               <circle class="soc-ring-bg"   cx="60" cy="60" r="50" fill="none" stroke-width="10"/>
@@ -76,7 +77,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card card-outlined">
           <div class="batt-grid">
             <div class="batt-cell" id="cell-volt">
               <div class="batt-cell-val" id="b-volt">--</div>
@@ -97,7 +98,7 @@
           </div>
         </div>
 
-        <div class="pid-card">
+        <div class="pid-card" data-state="">
           <div class="pid-dot" id="proc-dot"></div>
           <div class="pid-info">
             <div class="pid-name">MAIN</div>
@@ -105,12 +106,12 @@
           </div>
           <div class="pid-badge off" id="proc-status">离线</div>
           <div class="pid-actions">
-            <button class="pid-btn outlined" onclick="popBtn(this);svcStop()">停止服务</button>
-            <button class="pid-btn filled" onclick="popBtn(this);svcRestart()">重启服务</button>
+            <button class="pid-btn outlined" data-action="svcStop">停止服务</button>
+            <button class="pid-btn filled" data-action="svcRestart">重启服务</button>
           </div>
         </div>
 
-        <div class="card">
+        <div class="card card-outlined">
           <div class="card-head">设备</div>
           <div class="info-list">
             <div class="info-item">
@@ -125,7 +126,7 @@
         </div>
 
         <div class="center-btn" style="gap:10px">
-          <button class="btn-filled" onclick="popBtn(this);refreshStatus()">
+          <button class="btn-filled" data-action="refreshStatus">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             刷新
           </button>
@@ -137,7 +138,7 @@
     <div class="page" id="page-config">
       <div class="top-bar top-bar-row">
         <div class="top-bar-title">开启你的自定义</div>
-        <div class="top-bar-hint" onclick="openChargingPage()">
+        <div class="top-bar-hint" data-action="openChargingPage">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
           <span>左滑切页</span>
         </div>
@@ -154,7 +155,7 @@
               <div class="chg-item-sub">充电时启用已开启的伪装功能</div>
               <div class="chg-gate-status" id="chg-gate-status">检测充电状态…</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="sw-chg-gate" onchange="onChgGateToggle()"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="sw-chg-gate" data-action="onChgGateToggle"><span class="toggle-slider"></span></label>
           </div>
           <div id="chg-gate-body" class="disguise-body">
             <div id="chg-gate-list"></div>
@@ -173,11 +174,11 @@
               <div class="chg-item-title">电量伪装</div>
               <div class="chg-item-sub">伪装电池容量百分比，滑块可调</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="sw-cap-spoof" onchange="onCapSpoofToggle()"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="sw-cap-spoof" data-action="onCapSpoofToggle"><span class="toggle-slider"></span></label>
           </div>
           <div class="disguise-body" id="cap-spoof-body">
             <div class="slider-wrap">
-              <input type="range" class="m3-slider" id="cap-spoof-slider" min="0" max="100" value="80" oninput="onCapSpoofSlider(this)">
+              <input type="range" class="m3-slider" id="cap-spoof-slider" min="0" max="100" value="80" data-action="onCapSpoofSlider">
             </div>
             <div class="chg-label-row">
               <span class="chg-range">0%</span>
@@ -196,11 +197,11 @@
               <div class="chg-item-title">电池温度伪装</div>
               <div class="chg-item-sub">伪装电池温度传感器返回值</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="sw-temp-spoof" onchange="onTempSpoofToggle()"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="sw-temp-spoof" data-action="onTempSpoofToggle"><span class="toggle-slider"></span></label>
           </div>
           <div class="disguise-body" id="temp-spoof-body">
             <div class="slider-wrap">
-              <input type="range" class="m3-slider" id="temp-spoof-slider" min="0" max="100" value="34" oninput="onTempSpoofSlider(this)">
+              <input type="range" class="m3-slider" id="temp-spoof-slider" min="0" max="100" value="34" data-action="onTempSpoofSlider">
             </div>
             <div class="chg-label-row">
               <span class="chg-range">0°C</span>
@@ -219,11 +220,11 @@
               <div class="chg-item-title">充电循环次数伪装</div>
               <div class="chg-item-sub">伪装电池循环计数，滑块可调</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="sw-cc-spoof" onchange="onCcSpoofToggle()"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="sw-cc-spoof" data-action="onCcSpoofToggle"><span class="toggle-slider"></span></label>
           </div>
           <div class="disguise-body" id="cc-spoof-body">
             <div class="slider-wrap">
-              <input type="range" class="m3-slider" id="cc-spoof-slider" min="0" max="9999" value="10" oninput="onCcSpoofSlider(this)">
+              <input type="range" class="m3-slider" id="cc-spoof-slider" min="0" max="9999" value="10" data-action="onCcSpoofSlider">
             </div>
             <div class="chg-label-row">
               <span class="chg-range">0</span>
@@ -242,7 +243,7 @@
               <div class="chg-item-title">充放状态伪装</div>
               <div class="chg-item-sub">将充电状态伪装为「未充电」</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="sw-status-spoof" onchange="onStatusSpoofToggle()"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="sw-status-spoof" data-action="onStatusSpoofToggle"><span class="toggle-slider"></span></label>
           </div>
         </div>
 
@@ -255,13 +256,13 @@
               <div class="chg-item-title">解除亮屏充电限制</div>
               <div class="chg-item-sub">充电时解除屏幕亮起导致的电流限制</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="sw-chg-unlock" onchange="onChgUnlockToggle()"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="sw-chg-unlock" data-action="onChgUnlockToggle"><span class="toggle-slider"></span></label>
           </div>
         </div>
 
         <div class="btn-row">
-          <button class="btn-outlined" onclick="popBtn(this);saveConfig()">保存配置</button>
-          <button class="btn-filled" onclick="popBtn(this);applyNow()">立即生效</button>
+          <button class="btn-outlined" data-action="saveConfig">保存配置</button>
+          <button class="btn-filled" data-action="applyNow">立即生效</button>
         </div>
 
       </div>
@@ -287,11 +288,11 @@
 
         <div class="card">
           <div class="about-link-grid">
-            <button class="link-btn" onclick="openUrl('https://1817712916.share.123pan.cn/123pan/pk6Tjv-IPUuv')">
+            <button class="link-btn" data-action="openUrl" data-url="https://1817712916.share.123pan.cn/123pan/pk6Tjv-IPUuv">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
               更新网盘
             </button>
-            <button class="link-btn" onclick="openUrl('https://t.me/freshcibuild')">
+            <button class="link-btn" data-action="openUrl" data-url="https://t.me/freshcibuild">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.4-5.94c.73-.33 1.43.18 1.15 1.3l-2.63 12.4c-.18.89-.74 1.1-1.5.69l-4.14-3.05-2 1.93c-.2.2-.37.37-.72.37z"/></svg>
               Telegram
             </button>
@@ -300,7 +301,7 @@
 
         <div class="section-label">作者</div>
         <div class="card card-no-chg">
-          <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/38698278')">
+          <div class="author-card" data-action="openUrl" data-url="https://www.coolapk.com/u/38698278">
             <img class="author-avatar" src="img/avatar.png" alt="川秋">
             <div class="author-info">
               <div class="author-name">石板上回荡的</div>
@@ -312,7 +313,7 @@
 
         <div class="section-label">代码节点 / 支持者</div>
         <div class="card card-no-chg">
-          <div class="author-card" onclick="openUrl('https://www.coolapk.com/u/4262905')">
+          <div class="author-card" data-action="openUrl" data-url="https://www.coolapk.com/u/4262905">
             <img class="author-avatar" src="img/阮mumu.jpg" alt="阮mumu">
             <div class="author-info">
               <div class="author-name">阮mumu</div>
@@ -320,7 +321,7 @@
             </div>
             <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
           </div>
-          <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" onclick="openUrl('https://www.coolapk.com/u/9510475')">
+          <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" data-action="openUrl" data-url="https://www.coolapk.com/u/9510475">
             <img class="author-avatar" src="img/她说好了.jpg" alt="她说好了">
             <div class="author-info">
               <div class="author-name">她说好了</div>
@@ -328,7 +329,7 @@
             </div>
             <svg class="author-arrow" width="20" height="20" viewBox="0 0 24 24" fill="var(--clr-on-surface-variant)"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
           </div>
-          <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" onclick="openUrl('https://www.coolapk.com/u/716079')">
+          <div class="author-card" style="border-top:1px solid var(--clr-outline-variant);" data-action="openUrl" data-url="https://www.coolapk.com/u/716079">
             <img class="author-avatar" src="img/bybycode.jpg" alt="bybycode">
             <div class="author-info">
               <div class="author-name">bybycode</div>
@@ -347,7 +348,7 @@
       <div class="top-bar top-bar-row">
         <div class="top-bar-title">充电控制</div>
         <div class="top-bar-charging-actions">
-          <label class="toggle-switch"><input type="checkbox" id="sw-debug" onchange="onDebugToggle()"><span class="toggle-slider"></span></label>
+          <label class="toggle-switch"><input type="checkbox" id="sw-debug" data-action="onDebugToggle"><span class="toggle-slider"></span></label>
           <span class="debug-label">调试环境</span>
         </div>
       </div>
@@ -365,7 +366,7 @@
                 <div class="chg-item-title">MI 伪旁路充电</div>
                 <div class="chg-item-sub">全局限制充电电流至 500mA，适用于小米/红米/POCO</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="sw-bypass" onchange="onBypassToggle()"><span class="toggle-slider"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="sw-bypass" data-action="onBypassToggle"><span class="toggle-slider"></span></label>
             </div>
           </div>
 
@@ -379,11 +380,11 @@
                 <div class="chg-item-title">充电调速</div>
                 <div class="chg-item-sub">限制最大充电电流，延长电池寿命</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="sw-currlimit" onchange="onCurrLimitToggle()"><span class="toggle-slider"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="sw-currlimit" data-action="onCurrLimitToggle"><span class="toggle-slider"></span></label>
             </div>
             <div class="chg-slider-area">
               <div class="slider-wrap">
-                <input type="range" class="m3-slider" id="curr-slider" min="500" max="22000" step="500" value="22000" oninput="onCurrSlider(this)">
+                <input type="range" class="m3-slider" id="curr-slider" min="500" max="22000" step="500" value="22000" data-action="onCurrSlider">
               </div>
               <div class="chg-label-row">
                 <span class="chg-range">500mA</span>
@@ -394,8 +395,8 @@
           </div>
 
           <div class="btn-row">
-            <button class="btn-outlined" onclick="popBtn(this);saveConfig()">保存配置</button>
-            <button class="btn-filled" onclick="popBtn(this);applyNow()">立即生效</button>
+            <button class="btn-outlined" data-action="saveConfig">保存配置</button>
+            <button class="btn-filled" data-action="applyNow">立即生效</button>
           </div>
         </div>
 
@@ -418,12 +419,12 @@
               <div class="gauge-labels"><span>30°C</span><span>38°C</span></div>
             </div>
             <div class="slider-wrap">
-              <input type="range" class="m3-slider" id="temp-slider" min="30" max="38" value="34" oninput="onTempSlider(this)">
+              <input type="range" class="m3-slider" id="temp-slider" min="30" max="38" value="34" data-action="onTempSlider">
             </div>
             <div class="seg-group" id="temp-presets">
-              <button class="seg-btn active" data-temp="30" onclick="setPreset(30)">30°C</button>
-              <button class="seg-btn" data-temp="34" onclick="setPreset(34)">34°C</button>
-              <button class="seg-btn" data-temp="36" onclick="setPreset(36)">36°C</button>
+              <button class="seg-btn active" data-temp="30" data-action="setPreset">30°C</button>
+              <button class="seg-btn" data-temp="34" data-action="setPreset">34°C</button>
+              <button class="seg-btn" data-temp="36" data-action="setPreset">36°C</button>
             </div>
           </div>
 
@@ -437,7 +438,7 @@
                 <div class="chg-item-title">CPU 频率解锁</div>
                 <div class="chg-item-sub">解除游戏/温控 CPU 频率限制</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="sw-cpu" onchange="cfg.cpu = this.checked ? 1 : 0"><span class="toggle-slider"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="sw-cpu" data-action="onCpuToggle"><span class="toggle-slider"></span></label>
             </div>
           </div>
 
@@ -451,7 +452,7 @@
                 <div class="chg-item-title">O 伪旁路充电</div>
                 <div class="chg-item-sub">OPPO/一加/真我基础旁路方案</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="sw-mmi" onchange="onMmiToggle()"><span class="toggle-slider"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="sw-mmi" data-action="onMmiToggle"><span class="toggle-slider"></span></label>
             </div>
             <div class="chg-divider"></div>
             <div class="chg-item">
@@ -462,7 +463,7 @@
                 <div class="chg-item-title">全场景伪 Osys 旁路充电</div>
                 <div class="chg-item-sub">系统级方案，注入 PLC 特性声明</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="sw-plc" onchange="onPlcToggle()"><span class="toggle-slider"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="sw-plc" data-action="onPlcToggle"><span class="toggle-slider"></span></label>
             </div>
           </div>
 
@@ -477,23 +478,23 @@
                   <div class="chg-item-title">快充伪插拔</div>
                   <div class="chg-item-sub">解除充电头计时器限制，保持快充不掉</div>
                 </div>
-                <label class="toggle-switch"><input type="checkbox" id="sw-plug" onchange="onPlugToggle()"><span class="toggle-slider"></span></label>
+                <label class="toggle-switch"><input type="checkbox" id="sw-plug" data-action="onPlugToggle"><span class="toggle-slider"></span></label>
               </div>
               <div id="plug-detail" class="plug-detail-wrap">
                 <div class="inc-row">
                   <span class="inc-label">间隔（分钟）</span>
                   <div class="inc-group">
-                    <button class="inc-btn" onclick="adjPlug('interval',-1)">−</button>
+                    <button class="inc-btn" data-action="adjPlugInterval" data-delta="-1">−</button>
                     <span class="inc-val" id="plug-interval-val">1min</span>
-                    <button class="inc-btn" onclick="adjPlug('interval',1)">+</button>
+                    <button class="inc-btn" data-action="adjPlugInterval" data-delta="1">+</button>
                   </div>
                 </div>
                 <div class="inc-row">
                   <span class="inc-label">电量阈值（%）</span>
                   <div class="inc-group">
-                    <button class="inc-btn" onclick="adjPlug('level',-5)">−</button>
+                    <button class="inc-btn" data-action="adjPlugLevel" data-delta="-5">−</button>
                     <span class="inc-val" id="plug-level-val">80%</span>
-                    <button class="inc-btn" onclick="adjPlug('level',5)">+</button>
+                    <button class="inc-btn" data-action="adjPlugLevel" data-delta="5">+</button>
                   </div>
                 </div>
               </div>
@@ -509,7 +510,7 @@
                 <div class="chg-item-title">组件控制</div>
                 <div class="chg-item-sub">WiFi 游戏高温加速 / 音频热控策略管理</div>
               </div>
-              <label class="toggle-switch"><input type="checkbox" id="sw-comp" onchange="onCompToggle()"><span class="toggle-slider"></span></label>
+              <label class="toggle-switch"><input type="checkbox" id="sw-comp" data-action="onCompToggle"><span class="toggle-slider"></span></label>
             </div>
             <div id="comp-detail" class="plug-detail-wrap">
               <div class="comp-row">
@@ -517,21 +518,21 @@
                   <div class="comp-row-title">WiFi 游戏高温加速</div>
                   <div class="comp-row-sub">开 = 1 / 关 = 0</div>
                 </div>
-                <label class="toggle-switch"><input type="checkbox" id="sw-comp-wifi" onchange="onCompWifiToggle()"><span class="toggle-slider"></span></label>
+                <label class="toggle-switch"><input type="checkbox" id="sw-comp-wifi" data-action="onCompWifiToggle"><span class="toggle-slider"></span></label>
               </div>
               <div class="comp-row">
                 <div class="comp-row-text">
                   <div class="comp-row-title">音频热控</div>
                   <div class="comp-row-sub">开 = 0 / 关 = 1</div>
                 </div>
-                <label class="toggle-switch"><input type="checkbox" id="sw-comp-audio" onchange="onCompAudioToggle()"><span class="toggle-slider"></span></label>
+                <label class="toggle-switch"><input type="checkbox" id="sw-comp-audio" data-action="onCompAudioToggle"><span class="toggle-slider"></span></label>
               </div>
             </div>
           </div>
 
           <div class="btn-row">
-            <button class="btn-outlined" onclick="popBtn(this);saveConfig()">保存配置</button>
-            <button class="btn-filled" onclick="popBtn(this);applyOplus()">立即生效</button>
+            <button class="btn-outlined" data-action="saveConfig">保存配置</button>
+            <button class="btn-filled" data-action="applyOplus">立即生效</button>
           </div>
         </div>
 
@@ -559,15 +560,19 @@
               <div class="chg-item-title">日志输出</div>
               <div class="chg-item-sub">开启后 frlog 守护进程将日志同步到 logcat</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="sw-frlog" onchange="onFrlogToggle()"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="sw-frlog" data-action="onFrlogToggle"><span class="toggle-slider"></span></label>
           </div>
         </div>
         <div class="log-toolbar">
-          <button class="log-btn" onclick="loadLog()">
+          <button class="log-btn" data-action="loadLog">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             刷新
           </button>
-          <button class="log-btn danger" onclick="clearLog()">清空日志</button>
+          <label class="log-auto-refresh">
+            <input type="checkbox" id="sw-log-auto" data-action="onLogAutoToggle">
+            <span>自动刷新</span>
+          </label>
+          <button class="log-btn danger" data-action="clearLog">清空日志</button>
         </div>
         <div class="log-view" id="log-content">加载中…</div>
       </div>
@@ -607,11 +612,12 @@
 
 </div>
 
-<script src="js/ui.js" defer></script>
 <script src="js/exec.js" defer></script>
+<script src="js/ui.js" defer></script>
 <script src="js/theme.js" defer></script>
 <script src="js/config.js" defer></script>
 <script src="js/status.js" defer></script>
+<script src="js/events.js" defer></script>
 <script src="js/charging.js" defer></script>
 
 </body>

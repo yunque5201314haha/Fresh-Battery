@@ -351,7 +351,7 @@ M3 Top App Bar — Medium variant
   font-size: 28px; font-weight: 400; line-height: 1.29;
   letter-spacing: 0;
   color: var(--clr-on-surface);
-  padding: 12px 0 4px;
+  padding: 12px 0 28px;
 }
 .top-bar-greeting {
   font-size: 13px;
@@ -369,18 +369,26 @@ Page body
 }
 
 /*
-M3 Cards — 严格遵循 M3 规范
-
-   Elevated Card: surfaceContainerLow + elev-1 (1dp)
-   Filled Card:   surfaceContainerHighest, 无阴影
-   形状: --shape-xl-inc (28dp) 保持一致
+M3 Cards — three variants
+   Elevated: surfaceContainerLow + elev-1 (default)
+   Filled:   surfaceContainerHighest, no shadow
+   Outlined: surface + 1dp outline, no shadow
 */
 .card {
-  border-radius: var(--shape-xl-inc);
+  border-radius: 12px;
   background: var(--clr-surface-container-low);
   overflow: hidden;
   box-shadow: var(--elev-1);
   transition: box-shadow .25s var(--motion-standard), background .3s ease;
+}
+.card-filled {
+  background: var(--clr-surface-container-highest);
+  box-shadow: none;
+}
+.card-outlined {
+  background: var(--clr-surface);
+  box-shadow: none;
+  border: 1px solid var(--clr-outline-variant);
 }
 /* Card supporting text header */
 .card-head {
@@ -390,12 +398,12 @@ M3 Cards — 严格遵循 M3 规范
   color: var(--clr-on-surface-variant); opacity: .7;
 }
 
-/* 卡片外独立区块标签，参考图风格 */
+/* M3 titleSmall 14sp/500 */
 .section-label {
-  font-size: 16px; font-weight: 600;
+  font-size: 14px; font-weight: 500;
   color: var(--clr-on-surface);
   padding: 4px 4px 8px;
-  letter-spacing: 0;
+  letter-spacing: .1px;
 }
 
 /*
@@ -406,7 +414,7 @@ Status Page — stat tiles
 /* Primary tonal tile */
 .tile-pri {
   background: var(--clr-primary-container);
-  border-radius: var(--shape-xl-inc);
+  border-radius: 12px;
   padding: 20px 20px 16px;
   display: flex; flex-direction: column; min-height: 150px;
   box-shadow: var(--elev-1);
@@ -414,15 +422,15 @@ Status Page — stat tiles
 /* Secondary tile — 用 surface-container-high，比背景稍深，和 tile-pri 同色调但更柔和 */
 .tile-sec {
   background: var(--clr-secondary-container);
-  border-radius: var(--shape-xl-inc);
+  border-radius: 12px;
   padding: 16px;
   display: flex; flex-direction: column; gap: 12px;
   box-shadow: var(--elev-1);
 }
 
 .tile-label {
-  font-size: 11px; font-weight: 500;
-  letter-spacing: .8px; text-transform: uppercase;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: .5px; text-transform: uppercase;
   opacity: .65;
 }
 .tile-pri .tile-label { color: var(--clr-on-primary-container); }
@@ -442,16 +450,16 @@ Status Page — stat tiles
   color: var(--clr-on-primary-container); opacity: .45; margin-top: 4px;
 }
 
-.sparkline-wrap { margin-top: auto; padding-top: 10px; }
+.sparkline-wrap { margin-top: auto; padding-top: 10px; position: relative; }
 canvas.sparkline { width: 100%; height: 32px; display: block; }
 
 .t-block { display: flex; flex-direction: column; gap: 2px; }
 
-/* Assist Chip — 全用主题 token，不再硬编码颜色 */
+/* M3 Assist Chip — 32dp, labelLarge 14sp/500 */
 .status-chip {
   display: inline-flex; align-items: center; height: 32px;
-  padding: 0 12px; border-radius: var(--shape-s);
-  font: 500 13px/1 var(--font);
+  padding: 0 16px; border-radius: 8px;
+  font: 500 14px/1 var(--font);
   background: color-mix(in srgb, var(--clr-on-secondary-container) 10%, transparent);
   color: var(--clr-on-secondary-container);
   transition: background .2s, color .2s;
@@ -462,16 +470,20 @@ canvas.sparkline { width: 100%; height: 32px; display: block; }
   color: var(--clr-primary);
 }
 
-/* PID 进程卡 — 使用主题 token */
+/* PID 进程卡 — 服务状态卡，左侧 accent 色条 */
 .pid-card {
-  border-radius: var(--shape-xl-inc);
+  border-radius: 12px;
   background: var(--clr-surface-container-high);
   padding: 16px 20px 12px;
   margin-top: 4px;
   display: flex; align-items: center; gap: 14px;
   flex-wrap: wrap;
   box-shadow: var(--elev-1);
+  border-left: 4px solid var(--clr-outline);
+  transition: border-color .3s var(--motion-standard);
 }
+.pid-card[data-state="ok"] { border-left-color: var(--clr-primary); }
+.pid-card[data-state="err"] { border-left-color: var(--clr-error); }
 .pid-dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: var(--clr-outline); flex-shrink: 0; transition: all .3s;
@@ -505,8 +517,8 @@ canvas.sparkline { width: 100%; height: 32px; display: block; }
   border-top: 1px solid color-mix(in srgb, var(--clr-outline-variant) 50%, transparent);
 }
 .pid-btn {
-  flex: 1; border: none; border-radius: var(--shape-l-inc);
-  font: 600 14px/1 var(--font); padding: 12px 0; cursor: pointer;
+  flex: 1; border: none; border-radius: 20px;
+  font: 500 14px/1 var(--font); padding: 10px 0; cursor: pointer;
   transition: opacity .15s; -webkit-user-select: none;
 }
 .pid-btn.filled {
@@ -514,47 +526,50 @@ canvas.sparkline { width: 100%; height: 32px; display: block; }
 }
 .pid-btn.outlined {
   background: transparent; color: var(--clr-primary);
-  border: 2px solid var(--clr-outline);
+  border: 1px solid var(--clr-outline);
 }
 .pid-btn:active { opacity: .7; }
 
-/* Info list rows */
+/* M3 List items — 48dp min-height */
 .info-list { overflow: hidden; }
 .info-item {
   display: flex; align-items: center;
-  min-height: 52px; padding: 8px 20px;
+  min-height: 48px; padding: 8px 16px;
   position: relative;
 }
 .info-item + .info-item::before {
   content: ''; position: absolute; top: 0; left: 20px; right: 20px;
   height: 1px; background: var(--clr-outline-variant); opacity: .5;
 }
-.info-label { font-size: 14px; color: var(--clr-on-surface); flex: 1; }
+.info-label { font-size: 16px; color: var(--clr-on-surface); flex: 1; }
 .info-value {
   font: 400 13px/1 var(--font-mono);
   color: var(--clr-on-surface-variant);
 }
 
 /*
-Buttons — 原生 M3 风格按钮
+Buttons — M3 Filled / Outlined Button (40dp, labelLarge 14sp/500)
 */
 .btn-filled, .btn-outlined {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 56px; padding: 16px 24px;
-  font: 600 16px/1 var(--font);
-  cursor: pointer; border-radius: var(--shape-l-inc);
-  transition: opacity .15s;
+  min-height: 40px; padding: 10px 24px;
+  font: 500 14px/1 var(--font);
+  cursor: pointer; border-radius: 20px;
+  transition: background .2s var(--motion-standard), box-shadow .2s var(--motion-standard), opacity .15s;
   -webkit-user-select: none; user-select: none;
   white-space: nowrap;
+  position: relative;
 }
 .btn-filled {
   background: var(--clr-primary); color: var(--clr-on-primary); border: none;
+  box-shadow: var(--elev-0, none);
 }
+.btn-filled:active { box-shadow: none; opacity: .92; }
 .btn-outlined {
   background: transparent; color: var(--clr-primary);
-  border: 2px solid var(--clr-outline);
+  border: 1px solid var(--clr-outline);
 }
-.btn-filled:active, .btn-outlined:active { opacity: .8; }
+.btn-outlined:active { background: color-mix(in srgb, var(--clr-primary) 8%, transparent); }
 .btn-filled svg { width: 18px; height: 18px; fill: currentColor; }
 .btn-row .btn-filled, .btn-row .btn-outlined { flex: 1; min-width: 0; }
 
@@ -601,30 +616,36 @@ Config Page
 }
 .slider-wrap { padding: 0 20px 4px; position: relative; z-index: 2; }
 
-/* Native M3-style range slider — replaces <md-slider> Web Component */
+/* M3 Slider — circular thumb 20dp, track 4dp inactive / 8dp active */
 input[type=range].m3-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 16px;
-  background: linear-gradient(to right, var(--clr-primary) var(--pct, 0%), var(--clr-surface-container-highest) var(--pct, 0%));
-  border-radius: 8px;
+  height: 4px;
+  background: var(--clr-surface-container-highest);
+  border-radius: 2px;
   outline: none;
   cursor: pointer;
   margin: 0;
   touch-action: none;
 }
+input[type=range].m3-slider::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+}
 input[type=range].m3-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 4px;
-  height: 36px;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
   background: var(--clr-primary);
-  border-radius: 2px;
+  border-radius: 50%;
   cursor: pointer;
-  transition: box-shadow .2s;
+  transition: box-shadow .2s var(--motion-standard), transform .15s var(--motion-spring-fast);
+  box-shadow: var(--elev-1);
 }
 input[type=range].m3-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2);
   box-shadow: 0 0 0 12px color-mix(in srgb, var(--clr-primary) 20%, transparent);
 }
 
@@ -647,9 +668,9 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 .seg-btn {
   flex: 1; border: none;
   background: transparent;
-  font: 600 14px/1 var(--font);
+  font: 500 14px/1 var(--font);
   color: var(--clr-on-surface);
-  padding: 14px 0;
+  padding: 10px 0;
   border-radius: var(--shape-full);
   cursor: pointer;
   position: relative; overflow: hidden;
@@ -682,7 +703,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   width: 20px; height: 20px;
   fill: currentColor;
 }
-/* 自定义 Toggle Switch — 严格 M3 规范，带 ✓/✕ 图标 */
+/* M3 Switch — 52×32dp, thumb off 16dp / on 24dp, no icons */
 .toggle-switch {
   position: relative;
   display: inline-flex;
@@ -703,38 +724,34 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 .toggle-slider {
   position: absolute;
   inset: 0;
-  background: var(--clr-surface-container-highest);
+  background: transparent;
+  border: 2px solid var(--clr-outline);
   border-radius: 9999px;
-  transition: background .22s var(--motion-standard);
+  transition: background .22s var(--motion-standard), border-color .22s var(--motion-standard);
   box-sizing: border-box;
 }
 .toggle-slider::before {
-  content: '✕';
+  content: '';
   position: absolute;
-  width: 24px;
-  height: 24px;
-  left: 4px;
-  top: 4px;
-  background: var(--clr-surface-container-lowest);
+  width: 16px;
+  height: 16px;
+  left: 6px;
+  top: 50%;
+  margin-top: -8px;
+  background: var(--clr-outline);
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--clr-outline);
-  box-shadow: var(--elev-1);
-  transition: transform .22s var(--motion-spring-fast), background .22s var(--motion-standard), color .22s var(--motion-standard);
-  line-height: 1;
+  transition: transform .22s var(--motion-spring-fast), width .22s var(--motion-spring-fast), height .22s var(--motion-spring-fast), margin-left .22s var(--motion-spring-fast), background .22s var(--motion-standard);
 }
 .toggle-switch input:checked + .toggle-slider {
   background: var(--clr-primary);
+  border-color: var(--clr-primary);
 }
 .toggle-switch input:checked + .toggle-slider::before {
-  content: '✓';
-  transform: translateX(20px);
+  width: 24px;
+  height: 24px;
+  left: 4px;
+  margin-top: -12px;
   background: var(--clr-on-primary);
-  color: var(--clr-primary);
 }
 /* 子项开关也保持垂直居中 */
 .sw-item .toggle-switch,
@@ -746,11 +763,11 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 /*
 About Page
 */
-/* Link buttons */
+/* M3 Filled Tonal Button */
 .link-btn {
   display: flex; align-items: center; justify-content: center; gap: 7px;
-  width: 100%; padding: 13px 12px;
-  border: none; border-radius: var(--shape-l-inc);
+  width: 100%; padding: 10px 12px;
+  border: none; border-radius: 20px;
   background: var(--clr-secondary-container);
   color: var(--clr-on-secondary-container);
   font: 500 14px/1 var(--font);
@@ -772,7 +789,7 @@ About Page
   padding-bottom: calc(80px + var(--safe-b) + 20px);
 }
 
-.card, .card-filled, .tile-pri, .tile-sec, .pid-card, .section-label {
+.card, .card-filled, .card-outlined, .tile-pri, .tile-sec, .pid-card, .section-label {
   opacity: 0; transform: translateY(8px);
 }
 .reveal { animation: reveal .36s var(--motion-spring-bouncy) var(--delay, 0ms) both; }
@@ -797,12 +814,10 @@ Charging — card shimmer
 body.charging .tile-pri,
 body.charging .tile-sec,
 body.charging .soc-ring-card,
-body.charging .card:not(.card-no-chg) {
+body.charging .card:not(.card-no-chg):not(.card-outlined) {
   position: relative;
-  /* surface-container 底色不变，仅加边框层 */
   outline: 1.5px solid transparent;
   outline-offset: 0;
-  /* 流光 border via box-shadow 模拟 */
   animation: chg-pulse 3s ease-in-out infinite;
 }
 
@@ -810,7 +825,7 @@ body.charging .card:not(.card-no-chg) {
 body.charging .tile-pri::after,
 body.charging .tile-sec::after,
 body.charging .soc-ring-card::after,
-body.charging .card:not(.card-no-chg)::after {
+body.charging .card:not(.card-no-chg):not(.card-outlined)::after {
   content: '';
   position: absolute;
   inset: -1.5px;
@@ -837,7 +852,7 @@ body.charging .card:not(.card-no-chg)::after {
 body.charging .tile-pri > *,
 body.charging .tile-sec > *,
 body.charging .soc-ring-card > *,
-body.charging .card:not(.card-no-chg) > * {
+body.charging .card:not(.card-no-chg):not(.card-outlined) > * {
   position: relative;
   z-index: 2;
 }
@@ -909,8 +924,8 @@ body.charging .card:not(.card-no-chg) > * {
 }
 .batt-cell:nth-child(1) { border-radius: 0; }
 .batt-cell:nth-child(2) { border-radius: 0; }
-.batt-cell:nth-child(3) { border-radius: 0 0 0 var(--shape-xl-inc); }
-.batt-cell:nth-child(4) { border-radius: 0 0 var(--shape-xl-inc) 0; }
+.batt-cell:nth-child(3) { border-radius: 0 0 0 12px; }
+.batt-cell:nth-child(4) { border-radius: 0 0 12px 0; }
 .batt-cell-val {
   font: 300 22px/1 var(--font);
   letter-spacing: -0.5px; font-variant-numeric: tabular-nums;
@@ -936,7 +951,7 @@ body.charging .card:not(.card-no-chg) > * {
 }
 .about-mod-icon {
   width: 52px; height: 52px;
-  border-radius: var(--shape-l-inc);
+  border-radius: 12px;
   background: var(--clr-primary-container);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
@@ -1055,13 +1070,13 @@ Charging Page — M3 化控件
   opacity: .6; white-space: nowrap;
 }
 
-/* M3 list item for charging controls */
+/* M3 List item — bodyLarge 16sp/400 label, bodyMedium 14sp/400 supporting */
 .chg-item {
-  display: flex; align-items: center; padding: 16px 20px; gap: 14px;
+  display: flex; align-items: center; padding: 16px; gap: 14px;
 }
 .chg-item-text { flex: 1; min-width: 0; }
-.chg-item-title { font: 600 14px/1.2 var(--font); color: var(--clr-on-surface); }
-.chg-item-sub { font: 400 12px/1.4 var(--font); color: var(--clr-on-surface-variant); margin-top: 2px; }
+.chg-item-title { font: 400 16px/1.25 var(--font); color: var(--clr-on-surface); }
+.chg-item-sub { font: 400 14px/1.4 var(--font); color: var(--clr-on-surface-variant); margin-top: 2px; }
 
 /* Current slider area */
 .chg-slider-area { padding: 8px 20px 16px; }
@@ -1251,9 +1266,9 @@ Charging Page — M3 化控件
 }
 .log-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 12px 16px; border: none; border-radius: var(--shape-l-inc);
+  padding: 10px 16px; border: none; border-radius: 20px;
   background: var(--clr-secondary-container); color: var(--clr-on-secondary-container);
-  font: 600 14px/1 var(--font); cursor: pointer; transition: opacity .15s;
+  font: 500 14px/1 var(--font); cursor: pointer; transition: opacity .15s;
 }
 .log-btn svg { width: 16px; height: 16px; fill: currentColor; }
 .log-btn:active { opacity: .7; }
@@ -1263,7 +1278,7 @@ Charging Page — M3 化控件
 }
 .log-view {
   background: var(--clr-surface-container-highest);
-  border-radius: var(--shape-l-inc);
+  border-radius: 12px;
   padding: 14px 16px;
   font: 400 11px/1.6 var(--font-mono);
   color: var(--clr-on-surface-variant);
@@ -1273,4 +1288,22 @@ Charging Page — M3 化控件
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   box-shadow: var(--elev-1);
+}
+
+/* 日志自动刷新开关 */
+.log-auto-refresh {
+  display: flex; align-items: center; gap: 6px;
+  font: 500 13px/1 var(--font); color: var(--clr-on-surface-variant);
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+}
+.log-auto-refresh input { accent-color: var(--clr-primary); width: 16px; height: 16px; }
+
+/* Sparkline Y 轴标注 */
+.sparkline-labels {
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: absolute; right: 0; top: 0; bottom: 0;
+  font: 400 9px/1 var(--font-mono);
+  color: var(--clr-on-surface-variant); opacity: .5;
+  pointer-events: none;
+  padding: 2px 0;
 }

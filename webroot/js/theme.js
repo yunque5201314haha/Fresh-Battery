@@ -42,6 +42,11 @@ function drawSparkline() {
   const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
   if (tempHistory.length < 2) { ctx.clearRect(0,0,W,H); return; }
   const mn = Math.min(...tempHistory)-.5, mx = Math.max(...tempHistory)+.5;
+  /* 更新 Y 轴标注 */
+  const elMax = document.getElementById('sparkline-max');
+  const elMin = document.getElementById('sparkline-min');
+  if (elMax) elMax.textContent = mx.toFixed(1) + '°';
+  if (elMin) elMin.textContent = mn.toFixed(1) + '°';
   const pts = tempHistory.map((v,i) => ({ x:i/(tempHistory.length-1)*W, y:H-(v-mn)/(mx-mn)*(H-6)-3 }));
   const pr = _cachedPrimary;
   ctx.beginPath(); ctx.moveTo(pts[0].x, H);

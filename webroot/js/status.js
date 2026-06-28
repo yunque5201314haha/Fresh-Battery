@@ -142,12 +142,15 @@ async function refreshStatus() {
     const elPid = $('proc-pid', _dom);
     const dot = $('proc-dot', _dom);
     const st = $('proc-status', _dom);
+    const pidCard = document.querySelector('.pid-card');
     if (elPid) elPid.textContent = pid ? 'PID ' + pid : '—';
     if (dot && st) {
       if (pid) {
         dot.className = 'pid-dot ok'; st.textContent = '运行中'; st.className = 'pid-badge';
+        if (pidCard) pidCard.dataset.state = 'ok';
       } else {
         dot.className = 'pid-dot err'; st.textContent = '离线'; st.className = 'pid-badge off';
+        if (pidCard) pidCard.dataset.state = 'err';
       }
     }
   }
@@ -179,16 +182,26 @@ let _deviceName  = '';   /* 商业机型名 */
 let _deviceDetected = false; /* 检测完成标记 */
 
 async function detectDevice() {
+  const TIMEOUT = 5000;
   try {
-    const [brand, mktname, dispname, oemname, model] = await Promise.all([
+    const detect = Promise.all([
       exec(`getprop ro.product.brand 2>/dev/null`),
       exec(`getprop ro.product.marketname 2>/dev/null`),
       exec(`getprop ro.product.display 2>/dev/null`),
       exec(`getprop ro.vendor.oplus.market.name 2>/dev/null`),
       exec(`getprop ro.product.model 2>/dev/null`),
     ]);
+    const timeout = new Promise(r => setTimeout(() => r(null), TIMEOUT));
+    const result = await Promise.race([detect, timeout]);
+    if (!result) {
+      /* 超时：标记 unknown 并提示 */
+      _deviceBrand = 'unknown';
+      const msg = document.getElementById('chg-unknown-msg');
+      if (msg) msg.textContent = '设备识别超时\n充电控制功能可能不可用';
+      return;
+    }
+    const [brand, mktname, dispname, oemname, model] = result;
     const b = (brand || '').trim().toLowerCase();
-    /* 优先取包含空格或中文的（商业名），纯字母数字的通常是代号 */
     const candidates = [oemname, mktname, dispname, model]
       .map(s => (s || '').trim())
       .filter(Boolean);
@@ -210,10 +223,8 @@ async function detectDevice() {
       } else if (_deviceBrand !== 'unknown') {
         el.textContent = '';
       }
-      /* unknown 且无商业名：不显示，避免用代号 */
     }
   } catch (e) {
-    /* 检测失败时标记为 unknown */
     _deviceBrand = 'unknown';
   } finally {
     _deviceDetected = true;

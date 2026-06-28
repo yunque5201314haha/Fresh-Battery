@@ -13,16 +13,7 @@ function applyMasterUI(on) {
 function onMasterChange(sw) { applyMasterUI(sw.checked); }
 function popBtn(el) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 
-function openUrl(url) {
-  if (!url) return;
-  try {
-    if (typeof ksu !== 'undefined' && ksu.exec) {
-      ksu.exec("am start -a android.intent.action.VIEW -d '" + url.replace(/'/g, "'\\''") + "' 2>/dev/null");
-      return;
-    }
-  } catch(_) {}
-  try { window.open(url, '_blank'); } catch(_) {}
-}
+/* openUrl 已移至 exec.js */
 
 /* 顶部导航胶囊动画 */
 function animateCards(page) {
@@ -121,16 +112,7 @@ function tick() {
 }
 tick(); setInterval(tick, 1000);
 
-const MODDIR  = '/data/adb/modules/Fresh-Battery';
-const CFG     = MODDIR + '/config';
-const PIDFILE = MODDIR + '/pids';
-const CC1     = '/sys/class/oplus_chg/battery/battery_cc';
-const CC2     = '/sys/class/power_supply/battery/cycle_count';
-const FAKE_CC = MODDIR + '/fake/fakecc';
-const CHIP_SOC= '/sys/class/oplus_chg/battery/chip_soc';
-const BAT_CAP = '/sys/class/power_supply/battery/capacity';
-const CPU_LMT = '/proc/game_opt/disable_cpufreq_limit';
-const LOGFILE = MODDIR + '/log';
+/* 路径常量已移至 exec.js */
 
 async function loadLog() {
   const el = document.getElementById('log-content');
