@@ -703,7 +703,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   width: 20px; height: 20px;
   fill: currentColor;
 }
-/* M3 Switch — 52×32dp, thumb off 16dp / on 24dp, no icons */
+/* M3 Switch — 52×32dp, track 2dp outline, handle off 16dp / on 24dp, icon 16dp */
 .toggle-switch {
   position: relative;
   display: inline-flex;
@@ -726,8 +726,8 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   inset: 0;
   background: transparent;
   border: 2px solid var(--clr-outline);
-  border-radius: 9999px;
-  transition: background .22s var(--motion-standard), border-color .22s var(--motion-standard);
+  border-radius: 16px;
+  transition: background .2s var(--motion-standard), border-color .2s var(--motion-standard);
   box-sizing: border-box;
 }
 .toggle-slider::before {
@@ -740,7 +740,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   margin-top: -8px;
   background: var(--clr-outline);
   border-radius: 50%;
-  transition: transform .22s var(--motion-spring-fast), width .22s var(--motion-spring-fast), height .22s var(--motion-spring-fast), margin-left .22s var(--motion-spring-fast), background .22s var(--motion-standard);
+  transition: all .2s var(--motion-spring-fast);
 }
 .toggle-switch input:checked + .toggle-slider {
   background: var(--clr-primary);
