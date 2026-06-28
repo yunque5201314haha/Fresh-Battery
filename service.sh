@@ -8,6 +8,7 @@ done
 chmod 755 "$MODDIR"
 chmod 644 "$MODDIR/module.prop"
 chmod 666 "$MODDIR/config" 2>/dev/null
+chmod 666 "$MODDIR/log" 2>/dev/null
 
 # 用 shell 递归替代 find，启动更快
 _chmod_tree() {

@@ -56,7 +56,8 @@ function animateCards(page) {
       animateCards(pg);
     }
     if (tb) tb.classList.add('active');
-    if (id === 'charging') setTimeout(() => drawGauge(cfg.target_temp), 80);  }
+    if (id === 'charging') setTimeout(() => drawGauge(cfg.target_temp), 80);
+    if (id === 'log') loadLog(); }
   window.doSwitch = doSwitch;
 
   /* 横滑切换：dir='left' 新页从右滑入，dir='right' 新页从左滑入 */
@@ -129,4 +130,20 @@ const FAKE_CC = MODDIR + '/fake/fakecc';
 const CHIP_SOC= '/sys/class/oplus_chg/battery/chip_soc';
 const BAT_CAP = '/sys/class/power_supply/battery/capacity';
 const CPU_LMT = '/proc/game_opt/disable_cpufreq_limit';
+const LOGFILE = MODDIR + '/log';
+
+async function loadLog() {
+  const el = document.getElementById('log-content');
+  if (!el) return;
+  el.textContent = '加载中…';
+  const raw = await exec(`cat '${LOGFILE}' 2>/dev/null | tail -500`, 8000);
+  el.textContent = raw || '（暂无日志）';
+  el.scrollTop = el.scrollHeight;
+}
+
+async function clearLog() {
+  if (!confirm('确定清空日志？')) return;
+  await exec(`printf '' > '${LOGFILE}' 2>/dev/null; true`);
+  loadLog();
+}
 

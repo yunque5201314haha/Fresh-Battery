@@ -3,6 +3,7 @@
  */
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -83,6 +84,7 @@ static char g_fake_cc[PLEN];
 static char g_fake_soc[PLEN];
 static char g_fake_cap[PLEN];
 static char g_fake_temp[PLEN];
+static char g_log[PLEN];
 
 typedef struct {
     int target_temp;
@@ -146,6 +148,57 @@ static void mkdirp(const char *path) {
         if (*p == '/') { *p = 0; mkdir(tmp, 0755); *p = '/'; }
     }
     mkdir(tmp, 0755);
+}
+
+/* ── 日志 ── */
+#define LOG_MAX_BYTES (100 * 1024)
+
+static void log_rotate(void) {
+    struct stat st;
+    if (stat(g_log, &st) != 0) return;
+    if (st.st_size < LOG_MAX_BYTES) return;
+    /* 保留后半部分 */
+    int fd = open(g_log, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return;
+    char buf[4096];
+    off_t skip = st.st_size - LOG_MAX_BYTES / 2;
+    if (skip > 0) lseek(fd, skip, SEEK_SET);
+    int n = read(fd, buf, sizeof(buf));
+    close(fd);
+    if (n <= 0) return;
+    fd = open(g_log, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+    if (fd < 0) return;
+    const char *cut = memchr(buf, '\n', n);
+    if (cut) { int off = cut - buf + 1; write(fd, cut + 1, n - off); }
+    else     { write(fd, buf, n); }
+    close(fd);
+}
+
+static void fb_log(const char *tag, const char *fmt, ...) {
+    char msg[256];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    /* logcat */
+    char lc[320];
+    snprintf(lc, sizeof(lc), "log -t FreshBattery '%s: %s' 2>/dev/null", tag, msg);
+    system(lc);
+
+    /* 文件 */
+    if (!g_log[0]) return;
+    log_rotate();
+    int fd = open(g_log, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
+    if (fd < 0) return;
+    time_t now = time(NULL);
+    struct tm *tm = localtime(&now);
+    char line[384];
+    int len = snprintf(line, sizeof(line), "%02d-%02d %02d:%02d:%02d [%s] %s\n",
+        tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec,
+        tag, msg);
+    write(fd, line, len);
+    close(fd);
 }
 
 static int cfg_get(const char *buf, const char *key) {
@@ -595,13 +648,16 @@ static void *thr_chg(void *arg) {
         int was_chg  = is_charging_status(prev);
 
         if (now_chg && !was_chg) {
+            fb_log("CHG", "开始充电 chg_unlock=%d cpu_unlock=%d", c.chg_unlock, c.cpu_unlock);
             if (c.chg_unlock) chg_unlock_on();
             if (c.cpu_unlock) cpu_limit_off();
             if (access(MI_CHG_CURR, F_OK) == 0) {
                 mi_chg_unlock();
                 mi_unlocked = 1;
+                fb_log("CHG", "MI充电电流已解锁");
             }
         } else if (!now_chg && was_chg) {
+            fb_log("CHG", "停止充电");
             if (c.chg_unlock) chg_unlock_off();
             if (c.cpu_unlock) cpu_limit_on();
             if (mi_unlocked) {
@@ -648,10 +704,11 @@ static void *thr_plug(void *arg) {
         if (now - s_last < (time_t)(cur_interval * 60)) continue;
         s_last = now;
 
-        if (access(MMI_CHG_ENABLE, W_OK) == 0)
+        if (access(MMI_CHG_ENABLE, W_OK) == 0) {
             wr_str(MMI_CHG_ENABLE, "0\n");
-        if (access(MMI_CHG_ENABLE, W_OK) == 0)
             wr_str(MMI_CHG_ENABLE, "1\n");
+            fb_log("PLUG", "伪插拔触发 SOC=%d%% 间隔=%dmin", soc, cur_interval);
+        }
     }
     return NULL;
 }
@@ -667,6 +724,7 @@ int main(int argc, char *argv[]) {
     snprintf(g_fake_cap,sizeof(g_fake_cap),"%s/fake/fakecap",   g_moddir);
     snprintf(g_fake_temp,sizeof(g_fake_temp),"%s/fake/faketemp",g_moddir);
     snprintf(g_fake_soc,sizeof(g_fake_soc),"%s/sys/class/oplus_chg/battery/fakesoc", g_moddir);
+    snprintf(g_log,     sizeof(g_log),     "%s/log",            g_moddir);
 
     int lock_fd = open(g_pids, O_RDWR | O_CREAT, 0644);
     if (lock_fd >= 0 && flock(lock_fd, LOCK_EX | LOCK_NB) < 0) {
@@ -698,6 +756,8 @@ int main(int argc, char *argv[]) {
     chmod(g_cfg, 0666);
 
     Config c = parse_config();
+    fb_log("INIT", "守护进程启动 PID=%d 模块目录=%s", (int)getpid(), g_moddir);
+    fb_log("INIT", "服务开关=%d 目标温度=%d 充电开启=%d", c.svc_enabled, c.target_temp, c.chg_gate);
 
     if (c.cap_mount) cap_mount();
     if (c.cc_spoof)  cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10);
@@ -760,6 +820,10 @@ int main(int argc, char *argv[]) {
 
         int chg = is_charging();
 
+        /* 充电状态变化日志 */
+        { static int _prev_chg = -1; if (_prev_chg != chg) {
+            fb_log("CHG", "充电状态: %s", chg ? "充电中" : "未充电"); _prev_chg = chg; } }
+
         /* 伪装功能：充电门控 — 若开启「充电专属」则仅在充电时生效 */
         int spoof_active = !c.chg_gate || chg;
         int gate_cap     = spoof_active && (!c.cap_spoof_chg    || chg);
@@ -768,16 +832,22 @@ int main(int argc, char *argv[]) {
         int gate_status  = spoof_active && (!c.status_spoof_chg || chg);
         int gate_unlock  = spoof_active && (!c.chg_unlock_chg   || chg);
 
-        TOGGLE(c.cc_spoof   && gate_cc,     cc_mounted,    cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10), cc_umount());
-        TOGGLE(c.cap_mount,                 cap_mounted,    cap_mount(), cap_umount());
-        TOGGLE(c.cap_spoof  && gate_cap,    cap_spoof_on,  cap_spoof_mount(c.cap_spoof_val), cap_spoof_umount());
-        TOGGLE(c.temp_spoof && gate_temp,   temp_spoof_on, temp_spoof_mount(c.temp_spoof_val), temp_spoof_umount());
-        TOGGLE(c.status_spoof && gate_status, status_spoof_on, status_spoof_mount("Discharging"), status_spoof_umount());
-        TOGGLE(c.chg_unlock && gate_unlock, chg_unlock_on, (void)0, unlock_chg_off());
+        /* 带日志的 TOGGLE */
+        #define LTOGGLE(cfg_flag, state, tag, on_fn, off_fn) do { \
+            if ((cfg_flag) && !(state)) { on_fn; (state) = 1; fb_log("TOGGLE", "%s → ON", tag); } \
+            else if (!(cfg_flag) && (state)) { off_fn; (state) = 0; fb_log("TOGGLE", "%s → OFF", tag); } \
+        } while(0)
 
-        TOGGLE(c.bypass_charge, bypass_on, bypass_charge_on(), bypass_charge_off());
-        TOGGLE(c.mmi_bypass, mmi_on, mmi_bypass_on(), mmi_bypass_off());
-        TOGGLE(c.plc_charge, plc_on, plc_charge_on(g_moddir), plc_charge_off(g_moddir));
+        LTOGGLE(c.cc_spoof   && gate_cc,     cc_mounted,    "循环次数伪装", cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10), cc_umount());
+        LTOGGLE(c.cap_mount,                 cap_mounted,    "电量挂载",     cap_mount(), cap_umount());
+        LTOGGLE(c.cap_spoof  && gate_cap,    cap_spoof_on,  "电量伪装",     cap_spoof_mount(c.cap_spoof_val), cap_spoof_umount());
+        LTOGGLE(c.temp_spoof && gate_temp,   temp_spoof_on, "温度伪装",     temp_spoof_mount(c.temp_spoof_val), temp_spoof_umount());
+        LTOGGLE(c.status_spoof && gate_status, status_spoof_on, "充放状态伪装", status_spoof_mount("Discharging"), status_spoof_umount());
+        LTOGGLE(c.chg_unlock && gate_unlock, chg_unlock_on, "亮屏充电限制", (void)0, unlock_chg_off());
+
+        LTOGGLE(c.bypass_charge, bypass_on, "MI伪旁路充电", bypass_charge_on(), bypass_charge_off());
+        LTOGGLE(c.mmi_bypass, mmi_on, "O伪旁路充电", mmi_bypass_on(), mmi_bypass_off());
+        LTOGGLE(c.plc_charge, plc_on, "伪Osys旁路充电", plc_charge_on(g_moddir), plc_charge_off(g_moddir));
         TOGGLE(c.oplus_comp, comp_on,
             { system("setprop persist.sys.oplus.wifi.sla.game_high_temperature 1 2>/dev/null");
               system("setprop ro.oplus.audio.thermal_control 0 2>/dev/null"); },
@@ -790,11 +860,13 @@ int main(int argc, char *argv[]) {
                 curr_limit_apply(c.curr_max_ma);
                 curr_lim_on = 1;
                 last_curr_ma = c.curr_max_ma;
+                fb_log("TOGGLE", "电流限制 → %dmA", c.curr_max_ma);
             }
         } else if (curr_lim_on) {
             curr_limit_off();
             curr_lim_on = 0;
             last_curr_ma = 0;
+            fb_log("TOGGLE", "电流限制 → OFF");
         }
 
         if (chg) {
