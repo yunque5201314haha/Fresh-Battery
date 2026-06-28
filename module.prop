@@ -1,7 +1,7 @@
 id=Fresh-Battery
 name=FreshBattery
-version=v1.0
-versionCode=10
+version=v1.3
+versionCode=13
 author=石板上回荡的
 description=开启你的自定义,也许是伪装过温度墙，或许是解除亮屏充电限制功率，可以是伪装绕系统限制...
 webui=true
