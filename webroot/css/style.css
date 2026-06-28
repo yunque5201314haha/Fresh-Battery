@@ -703,7 +703,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   width: 20px; height: 20px;
   fill: currentColor;
 }
-/* M3 Switch — 52×32dp, track 2dp outline, handle off 16dp / on 24dp, icon 16dp */
+/* M3 Switch — 52×32dp, track 2dp outline, handle off 16dp / on 24dp */
 .toggle-switch {
   position: relative;
   display: inline-flex;
@@ -735,7 +735,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   position: absolute;
   width: 16px;
   height: 16px;
-  left: 6px;
+  left: 18px;
   top: 50%;
   margin-top: -8px;
   background: var(--clr-outline);
@@ -749,7 +749,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 .toggle-switch input:checked + .toggle-slider::before {
   width: 24px;
   height: 24px;
-  left: 4px;
+  left: 14px;
   margin-top: -12px;
   background: var(--clr-on-primary);
 }
