@@ -149,7 +149,7 @@ async function onFrlogToggle() {
   await exec(`sed -i 's/^日志输出=.*/日志输出=${on?1:0}/' '${CFG}' 2>/dev/null; true`);
   /* 启停 frlog */
   if (on) {
-    await exec(`killall frlog 2>/dev/null; '${MODDIR}/frlog' '${MODDIR}' >/dev/null 2>&1 &`);
+    await exec(`killall frlog 2>/dev/null; '${MODDIR}/bin/frlog' '${MODDIR}' >/dev/null 2>&1 &`);
   } else {
     await exec(`killall frlog 2>/dev/null; true`);
   }

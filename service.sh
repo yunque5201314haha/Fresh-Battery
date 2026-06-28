@@ -19,14 +19,14 @@ _chmod_tree() {
 }
 [ -d "$MODDIR/webroot" ] && _chmod_tree "$MODDIR/webroot"
 
-if [ -x "$MODDIR/MAIN" ]; then
-    "$MODDIR/MAIN" "$MODDIR" >/dev/null 2>&1 &
+if [ -x "$MODDIR/bin/MAIN" ]; then
+    "$MODDIR/bin/MAIN" "$MODDIR" >/dev/null 2>&1 &
 else
     echo "FreshBattery: MAIN binary not found or not executable" >&2
 fi
 
 # 按配置启动日志守护进程
-if [ -x "$MODDIR/frlog" ]; then
+if [ -x "$MODDIR/bin/frlog" ]; then
     _log_on=$(grep '^日志输出=' "$MODDIR/config" 2>/dev/null | cut -d= -f2)
-    [ "$_log_on" = "1" ] && "$MODDIR/frlog" "$MODDIR" >/dev/null 2>&1 &
+    [ "$_log_on" = "1" ] && "$MODDIR/bin/frlog" "$MODDIR" >/dev/null 2>&1 &
 fi
