@@ -106,9 +106,17 @@ typedef struct {
     int cc_spoof_val;
     int status_spoof;
     int chg_unlock;
+    int cap_spoof_chg;
+    int temp_spoof_chg;
+    int cc_spoof_chg;
+    int status_spoof_chg;
+    int chg_unlock_chg;
 } Config;
 
-static const Config CFG_DEF = {34, 0, 0, 0, 0, 0, 0, 22000, 0, 0, 0, 80, 0, 0, 0, 0, 0, 80, 0, 34, 10, 0, 0};
+static const Config CFG_DEF = {
+    .target_temp = 34,
+    .curr_max_ma = 22000,
+};
 
 static int rd_int(const char *p) {
     int fd = open(p, O_RDONLY | O_CLOEXEC);
@@ -191,6 +199,11 @@ static Config parse_config(void) {
     v = cfg_get(buf, "循环伪装值");     if (v >= 0)               c.cc_spoof_val  = v;
     v = cfg_get(buf, "充放状态伪装");   if (v == 0 || v == 1)     c.status_spoof  = v;
     v = cfg_get(buf, "亮屏充电限制");   if (v == 0 || v == 1)     c.chg_unlock    = v;
+    v = cfg_get(buf, "电量伪装充电");   if (v == 0 || v == 1)     c.cap_spoof_chg    = v;
+    v = cfg_get(buf, "温度伪装充电");   if (v == 0 || v == 1)     c.temp_spoof_chg   = v;
+    v = cfg_get(buf, "循环伪装充电");   if (v == 0 || v == 1)     c.cc_spoof_chg     = v;
+    v = cfg_get(buf, "充放状态充电");   if (v == 0 || v == 1)     c.status_spoof_chg = v;
+    v = cfg_get(buf, "亮屏充电充电");   if (v == 0 || v == 1)     c.chg_unlock_chg   = v;
     return c;
 }
 
@@ -240,7 +253,12 @@ static void write_config(const Config *c) {
         "温度伪装值=%d\n"
         "循环伪装值=%d\n"
         "充放状态伪装=%d\n"
-        "亮屏充电限制=%d\n",
+        "亮屏充电限制=%d\n"
+        "电量伪装充电=%d\n"
+        "温度伪装充电=%d\n"
+        "循环伪装充电=%d\n"
+        "充放状态充电=%d\n"
+        "亮屏充电充电=%d\n",
         c->target_temp, c->svc_enabled,
         c->cc_spoof, c->cpu_unlock, c->cap_mount,
         c->bypass_charge, c->curr_limit, c->curr_max_ma,
@@ -249,7 +267,9 @@ static void write_config(const Config *c) {
         c->oplus_comp,
         c->chg_gate, c->cap_spoof, c->cap_spoof_val,
         c->temp_spoof, c->temp_spoof_val, c->cc_spoof_val,
-        c->status_spoof, c->chg_unlock);
+        c->status_spoof, c->chg_unlock,
+        c->cap_spoof_chg, c->temp_spoof_chg, c->cc_spoof_chg,
+        c->status_spoof_chg, c->chg_unlock_chg);
     fclose(f);
     rename(tmp, g_cfg);
     chmod(g_cfg, 0666);
@@ -575,14 +595,14 @@ static void *thr_chg(void *arg) {
         int was_chg  = is_charging_status(prev);
 
         if (now_chg && !was_chg) {
-            chg_unlock_on();
+            if (c.chg_unlock) chg_unlock_on();
             if (c.cpu_unlock) cpu_limit_off();
             if (access(MI_CHG_CURR, F_OK) == 0) {
                 mi_chg_unlock();
                 mi_unlocked = 1;
             }
         } else if (!now_chg && was_chg) {
-            chg_unlock_off();
+            if (c.chg_unlock) chg_unlock_off();
             if (c.cpu_unlock) cpu_limit_on();
             if (mi_unlocked) {
                 mi_chg_restore();
@@ -705,7 +725,6 @@ int main(int argc, char *argv[]) {
     int tick            = 0;
     int cap_spoof_on    = c.cap_spoof;
     int temp_spoof_on   = c.temp_spoof;
-    int cc_spoof_val_on = c.cc_spoof;
     int status_spoof_on = c.status_spoof;
     int chg_unlock_on   = c.chg_unlock;
 
@@ -717,14 +736,6 @@ int main(int argc, char *argv[]) {
 
     for (;;) {
         c = parse_config_cached();
-
-        TOGGLE(c.cc_spoof, cc_mounted, cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10), cc_umount());
-        TOGGLE(c.cap_mount, cap_mounted, cap_mount(), cap_umount());
-        TOGGLE(c.cap_spoof, cap_spoof_on, cap_spoof_mount(c.cap_spoof_val), cap_spoof_umount());
-        TOGGLE(c.temp_spoof, temp_spoof_on, temp_spoof_mount(c.temp_spoof_val), temp_spoof_umount());
-        TOGGLE(c.cc_spoof, cc_spoof_val_on, cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10), cc_umount());
-        TOGGLE(c.status_spoof, status_spoof_on, status_spoof_mount("Discharging"), status_spoof_umount());
-        TOGGLE(c.chg_unlock, chg_unlock_on, (void)0, unlock_chg_off());
 
         if (!c.svc_enabled) {
             write_temp(0);
@@ -748,6 +759,21 @@ int main(int argc, char *argv[]) {
         }
 
         int chg = is_charging();
+
+        /* 伪装功能：充电门控 — 若开启「充电专属」则仅在充电时生效 */
+        int spoof_active = !c.chg_gate || chg;
+        int gate_cap     = spoof_active && (!c.cap_spoof_chg    || chg);
+        int gate_temp    = spoof_active && (!c.temp_spoof_chg   || chg);
+        int gate_cc      = spoof_active && (!c.cc_spoof_chg     || chg);
+        int gate_status  = spoof_active && (!c.status_spoof_chg || chg);
+        int gate_unlock  = spoof_active && (!c.chg_unlock_chg   || chg);
+
+        TOGGLE(c.cc_spoof   && gate_cc,     cc_mounted,    cc_mount_val(c.cc_spoof_val ? c.cc_spoof_val : 10), cc_umount());
+        TOGGLE(c.cap_mount,                 cap_mounted,    cap_mount(), cap_umount());
+        TOGGLE(c.cap_spoof  && gate_cap,    cap_spoof_on,  cap_spoof_mount(c.cap_spoof_val), cap_spoof_umount());
+        TOGGLE(c.temp_spoof && gate_temp,   temp_spoof_on, temp_spoof_mount(c.temp_spoof_val), temp_spoof_umount());
+        TOGGLE(c.status_spoof && gate_status, status_spoof_on, status_spoof_mount("Discharging"), status_spoof_umount());
+        TOGGLE(c.chg_unlock && gate_unlock, chg_unlock_on, (void)0, unlock_chg_off());
 
         TOGGLE(c.bypass_charge, bypass_on, bypass_charge_on(), bypass_charge_off());
         TOGGLE(c.mmi_bypass, mmi_on, mmi_bypass_on(), mmi_bypass_off());

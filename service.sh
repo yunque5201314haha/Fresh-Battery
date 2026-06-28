@@ -18,4 +18,8 @@ _chmod_tree() {
 }
 [ -d "$MODDIR/webroot" ] && _chmod_tree "$MODDIR/webroot"
 
-"$MODDIR/MAIN" "$MODDIR" >/dev/null 2>&1 &
+if [ -x "$MODDIR/MAIN" ]; then
+    "$MODDIR/MAIN" "$MODDIR" >/dev/null 2>&1 &
+else
+    echo "FreshBattery: MAIN binary not found or not executable" >&2
+fi
