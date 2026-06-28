@@ -703,7 +703,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   width: 20px; height: 20px;
   fill: currentColor;
 }
-/* M3 Switch — 52×32dp, track 2dp outline, handle off 16dp / on 24dp, icon 16dp */
+/* M3 Switch — 52×32dp, track surface-variant + outline 2dp, handle 16→24dp, icon 16dp */
 .toggle-switch {
   position: relative;
   display: inline-flex;
@@ -724,7 +724,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
 .toggle-slider {
   position: absolute;
   inset: 0;
-  background: transparent;
+  background: var(--clr-surface-variant);
   border: 2px solid var(--clr-outline);
   border-radius: 16px;
   transition: background .2s var(--motion-standard), border-color .2s var(--motion-standard);
@@ -735,7 +735,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   position: absolute;
   width: 16px;
   height: 16px;
-  left: 8px;
+  left: 6px;
   top: 50%;
   margin-top: -8px;
   background: var(--clr-outline);
@@ -745,7 +745,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   justify-content: center;
   font-size: 10px;
   font-weight: 700;
-  color: var(--clr-surface);
+  color: var(--clr-surface-variant);
   line-height: 1;
   transition: all .2s var(--motion-spring-fast);
 }
@@ -757,7 +757,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   content: '✓';
   width: 24px;
   height: 24px;
-  left: 20px;
+  left: 22px;
   margin-top: -12px;
   background: var(--clr-on-primary);
   color: var(--clr-primary);
