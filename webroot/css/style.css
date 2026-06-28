@@ -703,7 +703,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   width: 20px; height: 20px;
   fill: currentColor;
 }
-/* M3 Switch — 52×32dp, track 2dp outline, handle off 16dp / on 24dp */
+/* M3 Switch — 52×32dp, track 2dp outline, handle off 16dp / on 24dp, icon 16dp */
 .toggle-switch {
   position: relative;
   display: inline-flex;
@@ -731,15 +731,22 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   box-sizing: border-box;
 }
 .toggle-slider::before {
-  content: '';
+  content: '✕';
   position: absolute;
   width: 16px;
   height: 16px;
-  left: 18px;
+  left: 8px;
   top: 50%;
   margin-top: -8px;
   background: var(--clr-outline);
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--clr-surface);
+  line-height: 1;
   transition: all .2s var(--motion-spring-fast);
 }
 .toggle-switch input:checked + .toggle-slider {
@@ -747,11 +754,13 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   border-color: var(--clr-primary);
 }
 .toggle-switch input:checked + .toggle-slider::before {
+  content: '✓';
   width: 24px;
   height: 24px;
-  left: 14px;
+  left: 20px;
   margin-top: -12px;
   background: var(--clr-on-primary);
+  color: var(--clr-primary);
 }
 /* 子项开关也保持垂直居中 */
 .sw-item .toggle-switch,
