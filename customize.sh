@@ -11,7 +11,6 @@ mkdir -p "$MODPATH" || { ui_print "错误：无法创建 $MODPATH"; exit 1; }
 
 CFG="$MODPATH/config"
 
-# 仅在配置文件不存在时写入默认值，保留用户配置
 if [ ! -f "$CFG" ]; then
     printf '%s\n' \
         "目标温度=34" \
@@ -44,7 +43,6 @@ if [ ! -f "$CFG" ]; then
 fi
 chmod 666 "$CFG"
 
-# 创建模块目录并标记更新（兼容 Magisk/APatch/KernelSU）
 MDIR=/data/adb/modules/Fresh-Battery
 if [ -f /data/adb/magisk.db ] || [ -f /data/adb/apd ] || [ -f /data/adb/ksu ]; then
     mkdir -p "$MDIR"

@@ -10,7 +10,6 @@ chmod 644 "$MODDIR/module.prop"
 chmod 666 "$MODDIR/config" 2>/dev/null
 chmod 666 "$MODDIR/log" 2>/dev/null
 
-# 用 shell 递归替代 find，启动更快
 _chmod_tree() {
     for _f in "$1"/*; do
         [ -d "$_f" ] && { chmod 755 "$_f"; _chmod_tree "$_f"; }
@@ -25,7 +24,6 @@ else
     echo "FreshBattery: MAIN binary not found or not executable" >&2
 fi
 
-# 按配置启动日志守护进程
 if [ -x "$MODDIR/bin/frlog" ]; then
     _log_on=$(grep '^日志输出=' "$MODDIR/config" 2>/dev/null | cut -d= -f2)
     [ "$_log_on" = "1" ] && "$MODDIR/bin/frlog" "$MODDIR" >/dev/null 2>&1 &
