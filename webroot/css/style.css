@@ -703,7 +703,12 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   width: 20px; height: 20px;
   fill: currentColor;
 }
-/* M3 Switch — 52×32dp, track surface-variant + outline 2dp, handle 16→24dp, icon 16dp */
+/* M3 Switch — 52×32dp, track surface-variant + outline 2dp, handle off 16dp / on 24dp */
+/* 定位逻辑参照 @material/web 源码：
+   $margin = track-width(52) - track-height(32) = 20px
+   Off: margin-inline-end: 20px → handle 靠左
+   On:  margin-inline-start: 20px → handle 靠右
+*/
 .toggle-switch {
   position: relative;
   display: inline-flex;
@@ -730,12 +735,13 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   transition: background .2s var(--motion-standard), border-color .2s var(--motion-standard);
   box-sizing: border-box;
 }
+/* Off: handle 16dp 靠左，margin-inline-end: 20px 把 handle 推到左边 */
 .toggle-slider::before {
   content: '✕';
   position: absolute;
   width: 16px;
   height: 16px;
-  left: 6px;
+  left: 8px;
   top: 50%;
   margin-top: -8px;
   background: var(--clr-outline);
@@ -747,8 +753,9 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   font-weight: 700;
   color: var(--clr-surface-variant);
   line-height: 1;
-  transition: all .2s var(--motion-spring-fast);
+  transition: left .2s var(--motion-spring-fast), width .2s var(--motion-spring-fast), height .2s var(--motion-spring-fast), margin-top .2s var(--motion-spring-fast), background .2s var(--motion-standard), color .2s var(--motion-standard);
 }
+/* On: handle 24dp 靠右，margin-inline-start: 20px 把 handle 推到右边 */
 .toggle-switch input:checked + .toggle-slider {
   background: var(--clr-primary);
   border-color: var(--clr-primary);
@@ -757,7 +764,7 @@ input[type=range].m3-slider::-webkit-slider-thumb:active {
   content: '✓';
   width: 24px;
   height: 24px;
-  left: 22px;
+  left: 20px;
   margin-top: -12px;
   background: var(--clr-on-primary);
   color: var(--clr-primary);
